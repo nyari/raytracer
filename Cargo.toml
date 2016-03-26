@@ -1,0 +1,6 @@
+[package]
+name = "Raytracer"
+version = "0.1.0"
+authors = ["Nyári Dávid Tamás <nyaridavid@gmail.com>"]
+
+[dependencies]
