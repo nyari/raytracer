@@ -151,19 +151,7 @@ impl<T: MNum> Add for Matrix<T> {
     type Output = Result<Matrix<T>, MatrixOpError>;
 
     fn add(self, rhs: Matrix<T>) -> Result<Matrix<T>, MatrixOpError> {
-        if (self.n != rhs.n) | (self.m != rhs.m) {
-            return Err(MatrixOpError::SizeMismatch)
-        }
-        
-        let mut result: Vec<T> = Vec::with_capacity(self.data.len());
-
-        for idx in 0..self.data.len() {
-            let lhsval: T = self.data.get(idx).unwrap().clone();
-            let rhsval: T = rhs.data.get(idx).unwrap().clone();
-            result.push(lhsval + rhsval);
-        }
-
-        return Ok(Matrix { n: self.n, m: self.m, data: result })
+        return self.add_immut(&rhs);
     }
 
 
