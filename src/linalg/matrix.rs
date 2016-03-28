@@ -182,6 +182,23 @@ impl<T: MNum> Matrix<T> {
         let fun = sub_mnum;
         return self.by_each_element_mut(rhs, &fun);
     }
+
+    fn mul_immut(&self, rhs: &T) -> Result<Matrix<T>, MatrixOpResult> {
+        let mut clone = self.clone();
+        match clone.mul_mut(rhs) {
+            Ok(_)       => Ok(clone),
+            Err(err)    => Err(err),
+        }
+    }
+
+    fn mul_mut(&mut self, rhs: &T) -> Result<MatrixOpResult, MatrixOpResult> {
+        for item in &mut self.data {
+            let lhsval: T = item.clone();
+            let rhsval: T = rhs.clone();
+            *item = lhsval * rhsval;
+        }
+        Ok(MatrixOpResult::Successful)
+    }
 }
 
 
@@ -205,6 +222,5 @@ impl<T: MNum> Sub for Matrix<T> {
         return self.sub_immut(&rhs);
     }
 }
-
 
 
