@@ -5,7 +5,9 @@ use linalg::num::traits::{Num, Zero, One};
 
 // ----- Definitions ---------------------------------------------------------------------------
 
-pub trait MNum : Num + Clone {}
+pub trait MNum : Num + Clone {
+}
+
 
 #[allow(dead_code)]
 pub enum MatrixOpResult {
@@ -17,6 +19,7 @@ pub enum MatrixOpResult {
     NotVector,
 }
 
+
 #[allow(dead_code)]
 struct Matrix<T: MNum> {
     n:      usize,
@@ -24,7 +27,9 @@ struct Matrix<T: MNum> {
     data:   Vec<T>,
 }
 
+
 // ----- Helper functions ----------------------------------------------------------------------
+
 
 #[allow(dead_code)]
 fn add_mnum<T: MNum>(rhs: T, lhs: T) -> T {
@@ -38,6 +43,7 @@ fn sub_mnum<T: MNum>(rhs: T, lhs: T) -> T {
 
 
 // ----- Manipulator functions implementation ---------------------------------------------------
+
 
 #[allow(dead_code)]
 impl<T: MNum> Matrix<T> {
@@ -70,6 +76,14 @@ impl<T: MNum> Matrix<T> {
         } else {
             return Err(MatrixOpResult::InvalidIndex); 
         }
+    }
+    
+    fn get_n(&self) -> usize {
+        return self.n;
+    }
+
+    fn get_m(&self) -> usize {
+        return self.m;
     }
 
     fn get_immut(&self, i: usize, j: usize) -> Result<T, MatrixOpResult> {
@@ -107,7 +121,6 @@ impl<T: MNum> Matrix<T> {
             return Err(MatrixOpResult::NotSquareMatrix);
         }
     }
-
 }
 
 
@@ -150,7 +163,6 @@ impl<T: MNum> Matrix<T> {
         return Ok(MatrixOpResult::Successful)
     }
 
-
     fn add_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
         let fun = add_mnum;
         return self.by_each_element_immut(rhs, &fun);
@@ -183,6 +195,7 @@ impl<T: MNum> Add for Matrix<T> {
         return self.add_immut(&rhs);
     }
 }
+
 
 #[allow(dead_code)]
 impl<T: MNum> Sub for Matrix<T> {
