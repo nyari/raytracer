@@ -1,5 +1,3 @@
-use std::ops::Add;
-use std::ops::Sub;
 use linalg::num::traits::{Num, Zero, One};
 
 
@@ -21,7 +19,7 @@ pub enum MatrixOpResult {
 
 
 #[allow(dead_code)]
-struct Matrix<T: MNum> {
+pub struct Matrix<T: MNum> {
     n:      usize,
     m:      usize,
     data:   Vec<T>,
@@ -41,13 +39,51 @@ fn sub_mnum<T: MNum>(rhs: T, lhs: T) -> T {
     rhs - lhs
 }
 
+// ----- Traits ---------------------------------------------------------------------------------
+
+pub trait TMatrix<T: MNum> {
+
+// ----- Manipulation functions
+
+    fn new(n: usize, m: usize) -> Result<Matrix<T>, MatrixOpResult>;
+    fn new_filled(n: usize, m: usize, filler: &Vec<T>) -> Result<Matrix<T>, MatrixOpResult>;
+    fn coord_transform(&self, i: usize, j: usize) -> Result<usize, MatrixOpResult>;
+    fn index_transform(&self, n: usize) -> Result<(usize, usize), MatrixOpResult>;
+    fn get_n(&self) -> usize;
+    fn get_m(&self) -> usize;
+    fn get_immut(&self, i: usize, j: usize) -> Result<T, MatrixOpResult>;
+    fn get_mut(&mut self, i: usize, j: usize) -> Result<&mut T, MatrixOpResult>;
+    fn load_identity(&mut self) -> Result<MatrixOpResult, MatrixOpResult>;
+
+// ----- Mathematical functions
+
+    fn by_each_element_immut(&self, rhs: &Matrix<T>, op_function: &Fn(T, T) -> T) -> Result<Matrix<T>, MatrixOpResult>;
+    fn by_each_element_mut(&mut self, rhs: &Matrix<T>, op_function: &Fn(T, T) -> T) -> Result<MatrixOpResult, MatrixOpResult>;
+    fn add_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult>;
+    fn add_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpResult, MatrixOpResult>;
+    fn sub_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult>;
+    fn sub_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpResult, MatrixOpResult>;
+    fn mul_immut(&self, rhs: &T) -> Result<Matrix<T>, MatrixOpResult>;
+    fn mul_mut(&mut self, rhs: &T) -> Result<MatrixOpResult, MatrixOpResult>;
+    fn xmul_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult>;
+    fn xmul_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpResult, MatrixOpResult>;
+    fn transpose_immut(&self) -> Result<Matrix<T>, MatrixOpResult>;
+    fn transpose_mut(&mut self) -> Result<MatrixOpResult, MatrixOpResult>;
+
+}
 
 // ----- Manipulator functions implementation ---------------------------------------------------
 
+impl<T: MNum> Clone for Matrix<T> {
+    fn clone(&self) -> Matrix<T> {
+        Matrix { n: self.n, m: self.m, data: self.data.clone() }
+    }
+
+}
 
 #[allow(dead_code)]
-impl<T: MNum> Matrix<T> {
-    fn create_matrix(n: usize, m: usize) -> Result<Matrix<T>, MatrixOpResult> {
+impl<T: MNum> TMatrix<T> for Matrix<T> {
+    fn new(n: usize, m: usize) -> Result<Matrix<T>, MatrixOpResult> {
         if (n < 1) || (m < 1) {
             return Err(MatrixOpResult::InvalidSize);
         }
@@ -60,6 +96,21 @@ impl<T: MNum> Matrix<T> {
         }
         
         return Ok(Matrix { n: n, m: m, data: data });
+    }
+
+    fn new_filled(n: usize, m: usize, filler: &Vec<T>) -> Result<Matrix<T>, MatrixOpResult>
+    {
+        if (n < 1) || (m < 1) {
+            return Err(MatrixOpResult::InvalidSize);
+        }
+
+        let size: usize = n * m;
+
+        if filler.len() != size {
+            return Err(MatrixOpResult::SizeMismatch);
+        }
+
+        return Ok(Matrix { n: n, m: m, data: filler.clone() });
     }
 
     fn coord_transform(&self, i: usize, j: usize) -> Result<usize, MatrixOpResult> {
@@ -121,20 +172,9 @@ impl<T: MNum> Matrix<T> {
             return Err(MatrixOpResult::NotSquareMatrix);
         }
     }
-}
-
-
-impl<T: MNum> Clone for Matrix<T> {
-    fn clone(&self) -> Matrix<T> {
-        Matrix { n: self.n, m: self.m, data: self.data.clone() }
-    }
-
-}
 
 // ----- Mathematics implementation -------------------------------------------------------------
 
-#[allow(dead_code)]
-impl<T: MNum> Matrix<T> {
     fn by_each_element_immut(&self, rhs: &Matrix<T>, op_function: &Fn(T, T) -> T) -> Result<Matrix<T>, MatrixOpResult> {
         if (self.n != rhs.n) | (self.m != rhs.m) {
             return Err(MatrixOpResult::SizeMismatch)
@@ -197,30 +237,63 @@ impl<T: MNum> Matrix<T> {
             let rhsval: T = rhs.clone();
             *item = lhsval * rhsval;
         }
+
         Ok(MatrixOpResult::Successful)
+    }
+
+    fn xmul_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
+        if self.m != rhs.n {
+            return Err(MatrixOpResult::SizeMismatch);
+        }
+        
+        let mut result = {
+            match Matrix::new(self.n, rhs.m) {
+                Ok(value)   => value,
+                Err(err)    => return Err(err),
+            }
+        };
+        
+        for i in 0..result.n {
+            for j in 0..result.m {
+                for k in 0..result.m {
+                    let nval: &mut T = try!(result.get_mut(i, j));
+                    *nval = nval.clone() + try!(self.get_immut(i, k)) * try!(rhs.get_immut(k, j)); 
+                }
+            }
+        }
+
+        Ok (result)
+    }
+
+    fn xmul_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpResult, MatrixOpResult> {
+        match self.xmul_immut(rhs) {
+            Ok(value)   => {
+                *self = value;
+                Ok(MatrixOpResult::Successful)
+            },
+            Err(err)    => Err(err)
+        }
+    }
+
+    fn transpose_immut(&self) -> Result<Matrix<T>, MatrixOpResult> {
+        let size: usize = self.n * self.m;
+        let mut buffer: Vec<T> = Vec::with_capacity(size);
+        
+        for j in 0..self.m {
+            for i in 0..self.n {
+                buffer.push(try!(self.get_immut(i, j)).clone());
+            }
+        }
+        
+        Ok (Matrix { n: self.m, m: self.n, data: buffer })
+    }
+
+    fn transpose_mut(&mut self) -> Result<MatrixOpResult, MatrixOpResult> {
+        *self = try!(self.transpose_immut());
+        Ok (MatrixOpResult::Successful)
     }
 }
 
 
 // ----- Operator implementation -----------------------------------------------------------------
-
-#[allow(dead_code)]
-impl<T: MNum> Add for Matrix<T> {
-    type Output = Result<Matrix<T>, MatrixOpResult>;
-
-    fn add(self, rhs: Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
-        return self.add_immut(&rhs);
-    }
-}
-
-
-#[allow(dead_code)]
-impl<T: MNum> Sub for Matrix<T> {
-    type Output = Result<Matrix<T>, MatrixOpResult>;
-
-    fn sub(self, rhs: Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
-        return self.sub_immut(&rhs);
-    }
-}
-
 
