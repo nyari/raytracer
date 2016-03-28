@@ -1,4 +1,5 @@
 use std::ops::Add;
+use std::ops::Sub;
 use linalg::num::traits::{Num, Zero, One};
 
 
@@ -7,7 +8,7 @@ use linalg::num::traits::{Num, Zero, One};
 pub trait MNum : Num + Clone {}
 
 #[allow(dead_code)]
-pub enum MatrixOpError {
+pub enum MatrixOpResult {
     Successful,
     SizeMismatch,
     InvalidIndex,
@@ -23,13 +24,26 @@ struct Matrix<T: MNum> {
     data:   Vec<T>,
 }
 
+// ----- Helper functions ----------------------------------------------------------------------
+
+#[allow(dead_code)]
+fn add_mnum<T: MNum>(rhs: T, lhs: T) -> T {
+    rhs + lhs
+}
+
+#[allow(dead_code)]
+fn sub_mnum<T: MNum>(rhs: T, lhs: T) -> T {
+    rhs - lhs
+}
+
+
 // ----- Manipulator functions implementation ---------------------------------------------------
 
 #[allow(dead_code)]
 impl<T: MNum> Matrix<T> {
-    fn create_matrix(n: usize, m: usize) -> Result<Matrix<T>, MatrixOpError> {
+    fn create_matrix(n: usize, m: usize) -> Result<Matrix<T>, MatrixOpResult> {
         if (n < 1) || (m < 1) {
-            return Err(MatrixOpError::InvalidSize);
+            return Err(MatrixOpResult::InvalidSize);
         }
         
         let size: usize = n * m;
@@ -42,37 +56,37 @@ impl<T: MNum> Matrix<T> {
         return Ok(Matrix { n: n, m: m, data: data });
     }
 
-    fn coord_transform(&self, i: usize, j: usize) -> Result<usize, MatrixOpError> {
+    fn coord_transform(&self, i: usize, j: usize) -> Result<usize, MatrixOpResult> {
         if (i < self.n) && (j < self.m) {
             return Ok(i * self.n + j);
         } else {
-            return Err(MatrixOpError::InvalidIndex); 
+            return Err(MatrixOpResult::InvalidIndex); 
         }
     }
 
-    fn index_transform(&self, n: usize) -> Result<(usize, usize), MatrixOpError> {
+    fn index_transform(&self, n: usize) -> Result<(usize, usize), MatrixOpResult> {
         if n < self.data.len() {
             return Ok((n / self.n.clone(), n % self.n.clone()));
         } else {
-            return Err(MatrixOpError::InvalidIndex); 
+            return Err(MatrixOpResult::InvalidIndex); 
         }
     }
 
-    fn get_immut(&self, i: usize, j: usize) -> Result<T, MatrixOpError> {
+    fn get_immut(&self, i: usize, j: usize) -> Result<T, MatrixOpResult> {
         match self.coord_transform(i, j) {
             Ok(value)   =>  return Ok(self.data.get(value).unwrap().clone()),
             Err(err)    =>  return Err(err),  
         }
     }
 
-    fn get_mut(&mut self, i: usize, j: usize) -> Result<&mut T, MatrixOpError> {
+    fn get_mut(&mut self, i: usize, j: usize) -> Result<&mut T, MatrixOpResult> {
         match self.coord_transform(i, j) {
             Ok(value)   =>  return Ok(self.data.get_mut(value).unwrap()),
             Err(err)    =>  return Err(err),  
         }
     }
     
-    fn load_identity(&mut self) -> Result<MatrixOpError, MatrixOpError> {
+    fn load_identity(&mut self) -> Result<MatrixOpResult, MatrixOpResult> {
         if self.n == self.m {
             for idx in 0..self.data.len() {
                 match self.index_transform(idx) {
@@ -88,9 +102,9 @@ impl<T: MNum> Matrix<T> {
                     Err(_)    => panic!("Unrecovarable error"),
                 }
             }
-            return Ok(MatrixOpError::Successful);
+            return Ok(MatrixOpResult::Successful);
         } else {
-            return Err(MatrixOpError::NotSquareMatrix);
+            return Err(MatrixOpResult::NotSquareMatrix);
         }
     }
 
@@ -108,38 +122,53 @@ impl<T: MNum> Clone for Matrix<T> {
 
 #[allow(dead_code)]
 impl<T: MNum> Matrix<T> {
-
-    fn add_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpError> {
+    fn by_each_element_immut(&self, rhs: &Matrix<T>, op_function: &Fn(T, T) -> T) -> Result<Matrix<T>, MatrixOpResult> {
         if (self.n != rhs.n) | (self.m != rhs.m) {
-            return Err(MatrixOpError::SizeMismatch)
+            return Err(MatrixOpResult::SizeMismatch)
         }
         
-        let mut result: Vec<T> = Vec::with_capacity(self.data.len());
-
-        for idx in 0..self.data.len() {
-            let lhsval: T = self.data.get(idx).unwrap().clone();
-            let rhsval: T = rhs.data.get(idx).unwrap().clone();
-            result.push(lhsval + rhsval);
+        let mut clone = self.clone();
+        match clone.by_each_element_mut(rhs, op_function) {
+            Ok(_)       => Ok(clone),
+            Err(err)    => Err(err),
         }
-
-        return Ok(Matrix { n: self.n, m: self.m, data: result })
-    
     }
 
-    fn add_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpError, MatrixOpError> { 
+    fn by_each_element_mut(&mut self, rhs: &Matrix<T>, op_function: &Fn(T, T) -> T) -> Result<MatrixOpResult, MatrixOpResult> {
         if (self.n != rhs.n) | (self.m != rhs.m) {
-            return Err(MatrixOpError::SizeMismatch)
+            return Err(MatrixOpResult::SizeMismatch)
         }
 
         for idx in 0..self.data.len() {
             let item: &mut T = self.data.get_mut(idx).unwrap();
             let lhsval = item.clone();
             let rhsval = rhs.data.get(idx).unwrap().clone();
-            *item = lhsval + rhsval;
+            *item = op_function(lhsval, rhsval);
             
         }
 
-        return Ok(MatrixOpError::Successful)
+        return Ok(MatrixOpResult::Successful)
+    }
+
+
+    fn add_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
+        let fun = add_mnum;
+        return self.by_each_element_immut(rhs, &fun);
+    }
+
+    fn add_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpResult, MatrixOpResult> { 
+        let fun = add_mnum;
+        return self.by_each_element_mut(rhs, &fun);
+    }
+
+    fn sub_immut(&self, rhs: &Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
+        let fun = sub_mnum;
+        return self.by_each_element_immut(rhs, &fun);
+    }
+
+    fn sub_mut(&mut self, rhs: &Matrix<T>) -> Result<MatrixOpResult, MatrixOpResult> { 
+        let fun = sub_mnum;
+        return self.by_each_element_mut(rhs, &fun);
     }
 }
 
@@ -148,13 +177,20 @@ impl<T: MNum> Matrix<T> {
 
 #[allow(dead_code)]
 impl<T: MNum> Add for Matrix<T> {
-    type Output = Result<Matrix<T>, MatrixOpError>;
+    type Output = Result<Matrix<T>, MatrixOpResult>;
 
-    fn add(self, rhs: Matrix<T>) -> Result<Matrix<T>, MatrixOpError> {
+    fn add(self, rhs: Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
         return self.add_immut(&rhs);
     }
+}
 
+#[allow(dead_code)]
+impl<T: MNum> Sub for Matrix<T> {
+    type Output = Result<Matrix<T>, MatrixOpResult>;
 
+    fn sub(self, rhs: Matrix<T>) -> Result<Matrix<T>, MatrixOpResult> {
+        return self.sub_immut(&rhs);
+    }
 }
 
 
