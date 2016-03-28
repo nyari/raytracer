@@ -254,10 +254,10 @@ impl<T: MNum> TMatrix<T> for Matrix<T> {
         };
         
         for i in 0..result.n {
-            for j in 0..result.m {
+            for j in 0..result.n {
                 for k in 0..result.m {
-                    let nval: &mut T = try!(result.get_mut(i, j));
-                    *nval = nval.clone() + try!(self.get_immut(i, k)) * try!(rhs.get_immut(k, j)); 
+                    let nval: &mut T = try!(result.get_mut(i, k));
+                    *nval = nval.clone() + try!(self.get_immut(i, k)) * try!(rhs.get_immut(j, k)); 
                 }
             }
         }
