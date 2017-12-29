@@ -8,6 +8,7 @@ extern crate num;
 
 pub mod defs;
 pub mod tools;
+pub mod core;
 
 mod tests {
     #[test]
