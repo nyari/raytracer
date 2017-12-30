@@ -9,3 +9,4 @@ use self::ray::*;
 use self::intersection::*;
 use self::model::*;
 use self::world::*;
+use self::light::*;
