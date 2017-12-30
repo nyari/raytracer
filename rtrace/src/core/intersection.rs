@@ -21,17 +21,17 @@ impl<'ray> RayIntersection<'ray> {
         Self {  normal: normal, 
                 point: point, 
                 itersector_ray: ray,
-                distance_to_intersection: na::distance(&Point3::from_homogeneous(ray.get_origin()).unwrap(),
+                distance_to_intersection: na::distance(&Point3::from_homogeneous(*ray.get_origin()).unwrap(),
                                                        &Point3::from_homogeneous(point).unwrap()) 
              }
     }
 
-    pub fn get_intersection_point(&self) -> VectorColumn4 {
-        self.point
+    pub fn get_intersection_point(&self) -> &VectorColumn4 {
+        &self.point
     }
 
-    pub fn get_normal_vector(&self) -> VectorColumn4 {
-        self.normal
+    pub fn get_normal_vector(&self) -> &VectorColumn4 {
+        &self.normal
     }
 
     pub fn get_distance_to_intersection(&self) -> DefNumType {

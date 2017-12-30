@@ -25,18 +25,18 @@ impl Ray {
 
     pub fn continue_ray(intersection: &RayIntersection, direction: VectorColumn4) -> Self {
         Self    { direction: direction,
-                  origin: intersection.get_intersection_point(),
+                  origin: *intersection.get_intersection_point(),
                   distance_to_origin: intersection.get_distance_to_intersection() + intersection.get_ray_travel_distance(),
                   inside_counter: intersection.get_ray_inside_counter(),
                   depth_counter: intersection.get_ray_depth_counter() + 1}
+    }  
+
+    pub fn get_origin(&self) -> &VectorColumn4 {
+        &self.origin
     }
 
-    pub fn get_origin(&self) -> VectorColumn4 {
-        self.origin
-    }
-
-    pub fn get_direction(&self) -> VectorColumn4 {
-        self.direction
+    pub fn get_direction(&self) -> &VectorColumn4 {
+        &self.direction
     }
 
     pub fn get_distance_to_origin(&self) -> DefNumType {
