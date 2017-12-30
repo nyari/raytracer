@@ -7,20 +7,21 @@ use core::Model;
 
 use ::na;
 
-#[derive(Debug)]
-pub struct RayIntersection<'ray> {
+pub struct RayIntersection<'ray, 'model> {
     normal : VectorColumn4,
     point : VectorColumn4,
-    itersector_ray : &'ray Ray,
+    intersector_ray : &'ray Ray,
+    intersected_model : &'model Model,
     distance_to_intersection : DefNumType,
 }
 
-impl<'ray> RayIntersection<'ray> {
+impl<'ray, 'model> RayIntersection<'ray, 'model> {
     //Panic if "from_homogeneous" fails
-    pub fn new(normal: VectorColumn4, point: VectorColumn4, ray: &'ray Ray) -> Self {
+    pub fn new(normal: VectorColumn4, point: VectorColumn4, ray: &'ray Ray, model: &'model Model) -> Self {
         Self {  normal: normal, 
                 point: point, 
-                itersector_ray: ray,
+                intersector_ray: ray,
+                intersected_model: model,
                 distance_to_intersection: na::distance(&Point3::from_homogeneous(*ray.get_origin()).unwrap(),
                                                        &Point3::from_homogeneous(point).unwrap()) 
              }
@@ -39,15 +40,19 @@ impl<'ray> RayIntersection<'ray> {
     }
 
     pub fn get_ray_travel_distance(&self) -> DefNumType {
-        self.itersector_ray.get_distance_to_origin()
+        self.intersector_ray.get_distance_to_origin()
     }
 
     pub fn get_ray_depth_counter(&self) -> i32 {
-        self.itersector_ray.get_depth_counter()
+        self.intersector_ray.get_depth_counter()
     }
 
     pub fn get_ray_inside_counter(&self) -> i32 {
-        self.itersector_ray.get_inside_counter()
+        self.intersector_ray.get_inside_counter()
+    }
+
+    pub fn get_intersected_model(&self) -> &Model {
+        self.intersected_model
     }
 }
 
