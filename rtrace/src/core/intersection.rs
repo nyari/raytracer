@@ -17,7 +17,7 @@ pub struct RayIntersection<'ray> {
 
 impl<'ray> RayIntersection<'ray> {
     //Panic if "from_homogeneous" fails
-    fn new(normal: VectorColumn4, point: VectorColumn4, ray: &'ray Ray) -> Self {
+    pub fn new(normal: VectorColumn4, point: VectorColumn4, ray: &'ray Ray) -> Self {
         Self {  normal: normal, 
                 point: point, 
                 itersector_ray: ray,

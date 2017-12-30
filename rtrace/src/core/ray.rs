@@ -1,9 +1,8 @@
-use defs::VectorTup;
-use defs::PointTup;
+use defs::Vector3;
+use defs::Point3;
 use defs::DefNumType;
 use defs::VectorColumn4;
 
-use tools::conv;
 use core::RayIntersection;
 
 #[derive(Debug)]
@@ -16,9 +15,9 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(origin: PointTup, dir: VectorTup) -> Self {
-        Self    { direction: conv::vectcolumn4(dir),
-                  origin: conv::vectcolumn4(origin),
+    pub fn new(origin: Point3, dir: Vector3) -> Self {
+        Self    { direction: dir.to_homogeneous(),
+                  origin: origin.to_homogeneous(),
                   distance_to_origin: 0.0,
                   inside_counter: 0,
                   depth_counter: 0 }
@@ -57,17 +56,26 @@ impl Ray {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tools::NewHomogeneus;
 
     #[test]
     fn test_ray_new1_assignment() {
-        let test_ray = Ray::new(PointTup::new(0.0, 0.0, 0.0), VectorTup::new(1.0, 0.0, 0.0));
+        let test_ray = Ray::new(Point3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0));
 
         assert_eq!(test_ray.get_distance_to_origin(), 0.0);
         assert_eq!(test_ray.get_inside_counter(), 0);
         assert_eq!(test_ray.get_depth_counter(), 0);
     }
 
+    #[test]
     fn test_continue_ray() {
+        let initial_ray = Ray::new(Point3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0));
+        let intersection = RayIntersection::new(Vector3::new_homogeneous(0.0, 0.0, 1.0),
+                                                Point3::new_homogeneous(1.0, 0.0, 0.0),
+                                                &initial_ray);
+        let continued_ray = Ray::continue_ray(&intersection, Vector3::new_homogeneous(0.0, 1.0, 0.0));
 
+        assert_eq!(continued_ray.get_depth_counter(), 1);
+        assert_eq!(continued_ray.get_distance_to_origin(), 1.0);
     }
 }
