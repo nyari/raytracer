@@ -1,29 +1,29 @@
 use defs::Vector3;
 use defs::Point3;
 use defs::DefNumType;
-use defs::VectorColumn4;
 
 use core::RayIntersection;
 
 #[derive(Debug)]
 pub struct Ray {
-    direction : VectorColumn4,
-    origin : VectorColumn4,
+    direction : Vector3,
+    origin : Point3,
     distance_to_origin : DefNumType,
     inside_counter : i32,
     depth_counter : i32
 }
 
+
 impl Ray {
     pub fn new(origin: Point3, dir: Vector3) -> Self {
-        Self    { direction: dir.to_homogeneous(),
-                  origin: origin.to_homogeneous(),
+        Self    { direction: dir,
+                  origin: origin,
                   distance_to_origin: 0.0,
                   inside_counter: 0,
                   depth_counter: 0 }
     }
 
-    pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: VectorColumn4) -> Self {
+    pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Self {
         Self    { direction: direction,
                   origin: *intersection.get_intersection_point(),
                   distance_to_origin: intersection.get_distance_to_intersection() + intersection.get_ray_travel_distance(),
@@ -31,7 +31,7 @@ impl Ray {
                   depth_counter: intersection.get_ray_depth_counter() + 1}
     }
 
-    pub fn continue_ray_from_previous(previous_ray: &Ray, origin: VectorColumn4, direction: VectorColumn4) -> Self {
+    pub fn continue_ray_from_previous(previous_ray: &Ray, origin: Point3, direction: Vector3) -> Self {
         Self    { direction : direction,
                   origin : origin,
                   depth_counter : previous_ray.depth_counter + 1,
@@ -43,11 +43,11 @@ impl Ray {
                   ..*ray }
     }
 
-    pub fn get_origin(&self) -> &VectorColumn4 {
+    pub fn get_origin(&self) -> &Point3 {
         &self.origin
     }
 
-    pub fn get_direction(&self) -> &VectorColumn4 {
+    pub fn get_direction(&self) -> &Vector3 {
         &self.direction
     }
 
@@ -84,8 +84,7 @@ impl Ray {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tools::NewHomogeneus;
-    use core::model::Model;
+    use core::material::Material;
     use defs::*;
 
     #[test]
@@ -99,34 +98,13 @@ mod tests {
 
     #[test]
     fn test_continue_ray_from_intersection() {
-        struct TestModel {
-
-        }
-
-        impl Model for TestModel {
-            #[allow(dead_code)]
-            fn get_model_view_matrix(&self) -> Option<Matrix4> {None}
-            #[allow(dead_code)]
-            fn get_intersection<'ray, 'model> (&self, ray: &'ray Ray) -> Option<RayIntersection<'ray, 'model>> {None}
-            #[allow(dead_code)]
-            fn get_ambient_color(&self, intersection: &RayIntersection) -> Option<Color> {None}
-            #[allow(dead_code)]
-            fn get_duffuse_color(&self, intersection: &RayIntersection) -> Option<Color> {None}
-            #[allow(dead_code)]
-            fn get_specular_color(&self, intersection: &RayIntersection) -> Option<Color> {None}
-            #[allow(dead_code)]
-            fn get_fresnel_reflect_color(&self, intersection: &RayIntersection) -> Option<Color> {None}
-            #[allow(dead_code)]
-            fn get_fresnel_refract_color(&self, intersection: &RayIntersection) -> Option<Color> {None}
-        }    
-
-        let dummy_model = TestModel {};
         let initial_ray = Ray::new(Point3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0));
-        let intersection = RayIntersection::new(Vector3::new_homogeneous(0.0, 0.0, 1.0),
-                                                Point3::new_homogeneous(1.0, 0.0, 0.0),
+        let intersection = RayIntersection::new(Vector3::new(0.0, 0.0, 1.0),
+                                                Point3::new(1.0, 0.0, 0.0),
                                                 &initial_ray,
-                                                &dummy_model);
-        let continued_ray = Ray::continue_ray_from_intersection(&intersection, Vector3::new_homogeneous(0.0, 1.0, 0.0));
+                                                Material::new_useless(),
+                                                false);
+        let continued_ray = Ray::continue_ray_from_intersection(&intersection, Vector3::new(0.0, 1.0, 0.0));
 
         assert_eq!(continued_ray.get_depth_counter(), 1);
         assert_eq!(continued_ray.get_distance_to_origin(), 1.0);

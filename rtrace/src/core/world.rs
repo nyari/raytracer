@@ -1,53 +1,42 @@
-use defs::Color;
-use defs::VectorColumn4;
-use defs::DefNumType;
+use core::{Color, Model, LightSource, Ray, RayIntersection, ColorCalculator};
+use tools::{Vector3Extensions};
 
-use core::model::Model;
-use core::light::LightSource;
-use core::ray::Ray;
-use core::intersection::RayIntersection;
-use core::material::ColorCalculator;
+pub type ModelBoxed = Box<Model + 'static>;
+pub type LightSourceBoxed = Box<LightSource + 'static>;
 
-type ModelBoxed = Box<Model + 'static>;
-type LightSourceBoxed = Box<LightSource + 'static>;
-
-type ModelVec = Vec<ModelBoxed>;
-type LightSourceVec = Vec<LightSourceBoxed>;
-
+pub type ModelVec = Vec<ModelBoxed>;
+pub type LightSourceVec = Vec<LightSourceBoxed>;
 
 
 pub trait RayCaster {
     fn cast_ray(&self, ray: &Ray) -> Option<Color>;
-    fn cast_ray_first_intersection_distance(&self, ray: &Ray) -> Option<DefNumType>;
+    fn cast_light_ray(&self, ray: &Ray, intersection: &RayIntersection) -> Option<Color>;
 }
 
 pub trait IlluminationCaster {
-    fn get_illumination_at(&self, coord: &VectorColumn4) -> Option<Color>;
+    fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<Color>;
 }
 
 pub trait Intersector {
-    fn new() -> Self;
-    
-    fn get_intersections<'ray, 'model>(&self, ray: &'ray Ray) -> Vec<RayIntersection<'ray, 'model>>;
-    fn get_nearest_intersection<'ray, 'model>(&self, ray: &'ray Ray) -> Option<RayIntersection<'ray, 'model>>;
-    
-    fn get_reverse_intersections<'ray, 'model>(&self, ray: &'ray Ray) -> Vec<RayIntersection<'ray, 'model>>;
-    fn get_reverse_nearest_intersection<'ray, 'model>(&self, ray: &'ray Ray) -> Option<RayIntersection<'ray, 'model>>;
+    fn new(models: ModelVec) -> Self;
 
-    fn build(&mut self, models: &ModelVec);
+    fn get_models(&self) -> &ModelVec;
+    fn get_models_mut(&mut self) -> &mut ModelVec;
+    
+    fn get_intersections_reverse_ordered<'ray>(&self, ray: &'ray Ray) -> Vec<RayIntersection<'ray>>;
+    fn get_nearest_intersection<'ray>(&self, ray: &'ray Ray) -> Option<RayIntersection<'ray>>;
 }
 
 pub trait Illuminator {
-    fn new() -> Self;
+    fn new(lights: LightSourceVec) -> Self;
 
-    fn get_illumination_at(&self, coord: &VectorColumn4, illumination_caster: &IlluminationCaster) -> Option<Color>;
+    fn get_lights(&self) -> &LightSourceVec;
+    fn get_lights_mut(&mut self) -> &mut LightSourceVec;
 
-    fn build(&mut self, lights: &LightSourceVec);
+    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &IlluminationCaster) -> Option<Color>;
 }
 
 pub struct World<RayIntersector, ColorResolver, LightSourceResolver> {
-    models : ModelVec,
-    lights : LightSourceVec,
     intersector : RayIntersector,
     color_resolver : ColorResolver,
     illuminator: LightSourceResolver,
@@ -60,17 +49,22 @@ impl<RayIntersector: Intersector,
      World<RayIntersector, ColorResolver, LightSourceResolver> {
     
     pub fn new(models: ModelVec, lights: LightSourceVec, ray_depth_limit: i32) -> Self {
-        let mut result = Self {models: models,
-                               lights: lights,
-                               intersector: RayIntersector::new(),
-                               color_resolver: ColorResolver::new(),
-                               illuminator: LightSourceResolver::new(),
-                               depth_limit: ray_depth_limit};
+        Self {intersector: RayIntersector::new(models),
+              color_resolver: ColorResolver::new(),
+              illuminator: LightSourceResolver::new(lights),
+              depth_limit: ray_depth_limit}
+    }
 
-        result.intersector.build(&result.models);
-        result.illuminator.build(&result.lights);
-        
-        result
+    pub fn get_intersector(&self) -> &RayIntersector {
+        &self.intersector
+    }
+
+    pub fn get_illuminator(&self) -> &LightSourceResolver {
+        &self.illuminator
+    }
+
+    pub fn get_color_resolver(&self) -> &ColorResolver {
+        &self.color_resolver
     }
 }
 
@@ -79,8 +73,8 @@ impl<RayIntersector: Intersector,
      LightSourceResolver : Illuminator> RayCaster for World<RayIntersector, ColorResolver, LightSourceResolver> {
     fn cast_ray(&self, ray: &Ray) -> Option<Color> {
         if ray.get_depth_counter() <= self.depth_limit {
-            match self.intersector.get_nearest_intersection(ray) {
-                Some(nearest_intersection) => self.color_resolver.get_color(&nearest_intersection, self),
+            match self.get_intersector().get_nearest_intersection(ray) {
+                Some(nearest_intersection) => self.get_color_resolver().get_color(&nearest_intersection, self),
                 None => None,
             }
         } else {
@@ -88,23 +82,35 @@ impl<RayIntersector: Intersector,
         }
     }
 
-    fn cast_ray_first_intersection_distance(&self, ray: &Ray) -> Option<DefNumType> {
-        if ray.get_depth_counter() <= self.depth_limit {
-            let nearest_intersection_option = self.intersector.get_nearest_intersection(ray);
-            match self.intersector.get_nearest_intersection(ray) {
-                Some(nearest_intersection) => Some(nearest_intersection.get_distance_to_intersection()),
-                None => None,
-            }
-        } else {
-            None
+    fn cast_light_ray(&self, ray: &Ray, intersection: &RayIntersection) -> Option<Color> {
+        let origin_to_intersection_vector = intersection.get_intersection_point() - ray.get_origin();
+
+        if !origin_to_intersection_vector.same_direction_as(ray.get_direction()) {
+            panic!("Ray not in the coorect direction for obstacle search!");
         }
+        
+        let max_length = origin_to_intersection_vector.length();
+        let mut resulting_color = Color::one();
+
+        for intersection in self.get_intersector().get_intersections_reverse_ordered(ray).iter().rev() {
+            if intersection.get_distance_to_intersection() > max_length {
+                return Some(resulting_color)
+            }
+            
+            match intersection.get_material().get_transparency_to_light() {
+                None => return None,
+                Some(transparency) => resulting_color *= transparency
+            }
+        }
+
+        Some(resulting_color)
     }
 }
 
 impl<RayIntersector: Intersector,
      ColorResolver: ColorCalculator,
      LightSourceResolver : Illuminator> IlluminationCaster for World<RayIntersector, ColorResolver, LightSourceResolver> {
-    fn get_illumination_at(&self, coord: &VectorColumn4) -> Option<Color> {
-        self.illuminator.get_illumination_at(coord, self)
+    fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<Color> {
+        self.get_illuminator().get_illumination_at(intersection, self)
     }
 }
