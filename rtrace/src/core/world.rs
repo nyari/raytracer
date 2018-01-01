@@ -10,11 +10,10 @@ pub type LightSourceVec = Vec<LightSourceBoxed>;
 
 pub trait RayCaster {
     fn cast_ray(&self, ray: &Ray) -> Option<Color>;
-    fn cast_light_ray(&self, ray: &Ray, intersection: &RayIntersection) -> Option<Color>;
 }
 
 pub trait IlluminationCaster {
-    fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<Color>;
+    fn cast_light_ray(&self, ray: &Ray, intersection: &RayIntersection) -> Option<Color>;
 }
 
 pub trait Intersector {
@@ -81,7 +80,11 @@ impl<RayIntersector: Intersector,
             None
         }
     }
+}
 
+impl<RayIntersector: Intersector,
+     ColorResolver: ColorCalculator,
+     LightSourceResolver : Illuminator> IlluminationCaster for World<RayIntersector, ColorResolver, LightSourceResolver> {
     fn cast_light_ray(&self, ray: &Ray, intersection: &RayIntersection) -> Option<Color> {
         let origin_to_intersection_vector = intersection.get_intersection_point() - ray.get_origin();
 
@@ -104,13 +107,5 @@ impl<RayIntersector: Intersector,
         }
 
         Some(resulting_color)
-    }
-}
-
-impl<RayIntersector: Intersector,
-     ColorResolver: ColorCalculator,
-     LightSourceResolver : Illuminator> IlluminationCaster for World<RayIntersector, ColorResolver, LightSourceResolver> {
-    fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<Color> {
-        self.get_illuminator().get_illumination_at(intersection, self)
     }
 }
