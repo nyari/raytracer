@@ -1,7 +1,4 @@
-use defs::Vector3;
-use defs::Point3;
-use defs::DefNumType;
-
+use defs::{Vector3, Point3, DefNumType, Matrix4};
 use core::RayIntersection;
 
 #[derive(Debug)]
@@ -16,7 +13,7 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(origin: Point3, dir: Vector3) -> Self {
-        Self    { direction: dir,
+        Self    { direction: dir.normalize(),
                   origin: origin,
                   distance_to_origin: 0.0,
                   inside_counter: 0,
@@ -24,7 +21,7 @@ impl Ray {
     }
 
     pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Self {
-        Self    { direction: direction,
+        Self    { direction: direction.normalize() ,
                   origin: *intersection.get_intersection_point(),
                   distance_to_origin: intersection.get_distance_to_intersection() + intersection.get_ray_travel_distance(),
                   inside_counter: intersection.get_ray_inside_counter(),
@@ -32,15 +29,27 @@ impl Ray {
     }
 
     pub fn continue_ray_from_previous(previous_ray: &Ray, origin: Point3, direction: Vector3) -> Self {
-        Self    { direction : direction,
+        Self    { direction : direction.normalize(),
                   origin : origin,
                   depth_counter : previous_ray.depth_counter + 1,
                   ..*previous_ray}
     }
 
     pub fn new_reversed_ray(ray: &Ray) -> Self {
-        Self    { direction: -ray.direction,
+        Self    { direction: (-ray.direction).normalize(),
                   ..*ray }
+    }
+
+    pub fn get_transformed(&self, point_and_dir_mx: (&Matrix4, &Matrix4)) -> Self {
+        let (point_tf_mx, vector_tf_mx) = point_and_dir_mx;
+
+        let origin = self.origin.to_homogeneous();
+        let direction = self.direction.to_homogeneous();
+
+        Self    { origin: Point3::from_homogeneous(point_tf_mx * origin).expect("Unhomogeneous transformed point"),
+                  direction: Vector3::from_homogeneous(vector_tf_mx * direction).expect("Unhomogeneous transformed vector"),
+                  ..*self
+        }
     }
 
     pub fn get_origin(&self) -> &Point3 {

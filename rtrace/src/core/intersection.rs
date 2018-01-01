@@ -1,4 +1,4 @@
-use defs::{DefNumType, Point3, Vector3};
+use defs::{DefNumType, Point3, Vector3, Matrix4};
 
 use core::{Ray, Material};
 
@@ -55,6 +55,19 @@ impl<'ray> RayIntersection<'ray> {
 
     pub fn was_inside(&self) -> bool {
         self.was_inside
+    }
+
+    pub fn get_transformed(&self, point_and_dir_mx: (&Matrix4, &Matrix4), input_ray: &'ray Ray) -> Self {
+        let (point_tf_mx, vector_tf_mx) = point_and_dir_mx;
+
+        let point = self.point.to_homogeneous();
+        let normal = self.normal.to_homogeneous();
+
+        Self    { point: Point3::from_homogeneous(point_tf_mx * point).expect("Unhomogeneous transformed point"),
+                  normal: Vector3::from_homogeneous(vector_tf_mx * normal).expect("Unhomogeneous transformed vector"),
+                  intersector_ray: input_ray,
+                  ..*self
+        }
     }
 }
 
