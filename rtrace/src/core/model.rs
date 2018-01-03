@@ -3,7 +3,7 @@ use core::{Ray, RayIntersection};
 
 
 pub trait Model {
-    fn get_intersection<'ray> (&self, ray: &'ray Ray) -> Option<RayIntersection<'ray>>;
+    fn get_intersection (&self, ray: & Ray) -> Option<RayIntersection>;
 }
 
 
@@ -18,7 +18,7 @@ impl<T:Model> SimpleModelWrapper<T> {
 }
 
 impl<T: Model> Model for SimpleModelWrapper<T> {
-    fn get_intersection<'ray> (&self, ray: &'ray Ray) -> Option<RayIntersection<'ray>> {
+    fn get_intersection(&self, ray: & Ray) -> Option<RayIntersection<>> {
         self.wrapped_model.get_intersection(ray)
     }
 }
@@ -42,12 +42,12 @@ impl<T: Model> ModelViewModelWrapper<T> {
 }
 
 impl<T: Model> Model for ModelViewModelWrapper<T> {
-    fn get_intersection<'ray> (&self, ray: &'ray Ray) -> Option<RayIntersection<'ray>> {
+    fn get_intersection(&self, ray: & Ray) -> Option<RayIntersection<>> {
         let transformed_ray = ray.get_transformed((&self.inverse_tf_matrix, &self.inverse_tf_matrix));
-        
+
         match self.wrapped_model.get_intersection(&transformed_ray) {
             None => None,
-            Some(transformed_intersection) => Some(transformed_intersection.get_transformed((&self.tf_matrix, &self.inverse_transposed_tf_matrix), ray))
+            Some(transformed_intersection) => Some(transformed_intersection.get_transformed((&self.tf_matrix, &self.inverse_transposed_tf_matrix)))
         }
     }
 }

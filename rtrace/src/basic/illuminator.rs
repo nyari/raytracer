@@ -18,7 +18,7 @@ impl Illuminator for SimpleIlluminator {
         &mut self.lights
     }
 
-    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &IlluminationCaster) -> Option<Color> {
+    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &RayCaster) -> Option<Color> {
         let result = self.lights.iter().fold(None, |acc, light| {
             match light.get_ray_to_intersection(intersection) {
                 None => acc,
