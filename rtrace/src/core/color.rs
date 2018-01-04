@@ -29,15 +29,32 @@ impl Color {
     }
 
     pub fn normalize(&mut self) {
-        self.r = if self.r > 1.0 {1.0} else {self.r};
-        self.g = if self.g > 1.0 {1.0} else {self.g};
-        self.b = if self.b > 1.0 {1.0} else {self.b};
+        self.r = self.r.min(1.0);
+        self.g = self.g.min(1.0);
+        self.b = self.b.min(1.0);
     }
 
     pub fn normalized(&self) -> Color {
         let mut result = self.clone();
         result.normalize();
         result
+    }
+
+    pub fn mul_scalar(&self, other: &DefNumType) -> Self {
+        Self {  r: self.r * other,
+                g: self.g * other,
+                b: self.b * other}
+    }
+
+    pub fn recip(&self) -> Self {
+        Self {  r: self.r.recip(),
+                g: self.g.recip(),
+                b: self.b.recip()
+            }
+    }
+
+    pub fn avg(&self) -> DefNumType {
+        (self.r + self.g + self.b) / 3.0
     }
 
     pub fn zero() -> Self {

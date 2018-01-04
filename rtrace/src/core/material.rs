@@ -1,12 +1,9 @@
-use core::world::RayCaster;
+use core::{RayCaster, Color, FresnelIndex, RayIntersection, IlluminationCaster};
 
-use core::intersection::RayIntersection;
-
-use core::color::{Color, FresnelIndex};
 use defs::DefNumType;
 
 pub trait ColorCalculator {
-    fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster) -> Option<Color>;
+    fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster, illumination_caster: &IlluminationCaster) -> Option<Color>;
 }
 
 pub struct Material {

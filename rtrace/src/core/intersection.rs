@@ -1,6 +1,6 @@
 use defs::{DefNumType, Point3, Vector3, Matrix4};
 
-use core::{Ray, RayState, Material};
+use core::{Ray, Material};
 
 use ::na;
 
@@ -11,14 +11,14 @@ pub struct RayIntersection {
     material_at_intersection : Material,
     distance_to_intersection : DefNumType,
     was_inside : bool,
-    ray_state : RayState
+    ray : Ray
 }
 
 impl RayIntersection {
     pub fn new(normal: Vector3, point: Point3, ray: & Ray, material: Material, was_inside: bool) -> Self {
-        Self {  normal: normal, 
+        Self {  normal: normal.normalize(), 
                 point: point, 
-                ray_state: ray.get_state(),
+                ray: *ray,
                 material_at_intersection: material,
                 distance_to_intersection: na::distance(ray.get_origin(), &point),
                 was_inside: was_inside
@@ -37,8 +37,12 @@ impl RayIntersection {
         self.distance_to_intersection
     }
 
-    pub fn get_itersector_ray_state(&self) -> &RayState {
-        &self.ray_state
+    pub fn get_itersector_ray(&self) -> &Ray {
+        &self.ray
+    }
+
+    pub fn get_view_direction(&self) -> Vector3 {
+        -self.ray.get_direction()
     }
 
     pub fn get_material(&self) -> &Material {

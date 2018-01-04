@@ -71,7 +71,7 @@ impl RayState {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
     direction : Vector3,
     origin : Point3,
@@ -100,7 +100,7 @@ impl Ray {
     }
 
     pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Result<Self, RayError> {
-        match RayState::get_continuation(intersection.get_itersector_ray_state(), intersection.get_distance_to_intersection()) {
+        match RayState::get_continuation(intersection.get_itersector_ray().get_state(), intersection.get_distance_to_intersection()) {
             Ok (continued_state) => {
                 Ok (Self {  direction: direction.normalize(),
                             origin: *intersection.get_intersection_point(),
@@ -175,8 +175,8 @@ impl Ray {
         self.state.leave_object()
     }
 
-    pub fn get_state(&self) -> RayState {
-        self.state
+    pub fn get_state(&self) -> &RayState {
+        &self.state
     }
 }
 

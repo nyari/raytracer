@@ -1,37 +1,28 @@
-use core::*;
-use core::color::Color;
+use core::{RayIntersection, RayCaster, LightIntersection, LightSourceVec, Illuminator};
 
 pub struct SimpleIlluminator {
     lights : LightSourceVec
 }
 
 impl Illuminator for SimpleIlluminator {
-    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &RayCaster) -> Option<Color> {
-        let result = self.lights.iter().fold(None, |acc, light| {
+    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &RayCaster) -> Vec<LightIntersection> {
+        self.lights.iter().filter_map(|light| {
             match light.get_ray_to_intersection(intersection) {
-                None => acc,
+                None => None,
                 Some(ray) => {
                     match illumination_caster.cast_light_ray(&ray, intersection) {
-                        None => acc,
+                        None => None,
                         Some(illumintaion_shadowing) => {
                             match light.get_illumination_at(intersection) {
-                                None => acc,
+                                None => None,
                                 Some(illumination) => {
-                                    match acc {
-                                        None => Some(illumination * illumintaion_shadowing),
-                                        Some(acc_illumination) => Some(acc_illumination + illumination * illumintaion_shadowing)
-                                    }
+                                    Some(illumination.get_shadowed(&illumintaion_shadowing))
                                 }
                             }
                         }
                     }
                 }
             }
-        });
-
-        match result {
-            Some(value) => Some(value.normalized()),
-            None => None,
-        }
+        }).collect()
     }
 }

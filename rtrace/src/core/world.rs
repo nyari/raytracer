@@ -1,4 +1,4 @@
-use core::{Color, Model, LightSource, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector};
+use core::{Color, Model, LightSource, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector, LightIntersection};
 use tools::{Vector3Extensions};
 
 pub type ModelBoxed = Box<Model + 'static>;
@@ -13,12 +13,12 @@ pub trait RayCaster {
 }
 
 pub trait IlluminationCaster {
-    fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<Color>;
+    fn get_illumination_at(&self, intersection: &RayIntersection) -> Vec<LightIntersection>;
 }
 
 pub struct World<IntersectorType, ColorCalculatorType, IlluminatorType> {
     intersector : IntersectorType,
-    color_resolver : ColorCalculatorType,
+    color_calculator : ColorCalculatorType,
     illuminator: IlluminatorType,
     depth_limit : i32,
 }
@@ -30,7 +30,7 @@ impl<IntersectorType: Intersector,
     
     pub fn new(intersector: IntersectorType, colorcalc: ColorCalculatorType, illuminator: IlluminatorType, ray_depth_limit: i32) -> Self {
         Self {intersector: intersector,
-              color_resolver: colorcalc,
+              color_calculator: colorcalc,
               illuminator: illuminator,
               depth_limit: ray_depth_limit}
     }
@@ -43,8 +43,8 @@ impl<IntersectorType: Intersector,
         &self.illuminator
     }
 
-    pub fn get_color_resolver(&self) -> &ColorCalculatorType {
-        &self.color_resolver
+    pub fn get_color_calculator(&self) -> &ColorCalculatorType {
+        &self.color_calculator
     }
 }
 
@@ -54,7 +54,7 @@ impl<IntersectorType: Intersector,
     fn cast_ray(&self, ray: &Ray) -> Option<Color> {
         if ray.get_depth_counter() <= self.depth_limit {
             match self.get_intersector().get_nearest_intersection(ray) {
-                Some(nearest_intersection) => self.get_color_resolver().get_color(&nearest_intersection, self),
+                Some(nearest_intersection) => self.get_color_calculator().get_color(&nearest_intersection, self, self),
                 None => None,
             }
         } else {
@@ -90,7 +90,7 @@ impl<IntersectorType: Intersector,
 impl<IntersectorType: Intersector,
      ColorCalculatorType: ColorCalculator,
      IlluminatorType : Illuminator> IlluminationCaster for World<IntersectorType, ColorCalculatorType, IlluminatorType> {
-    fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<Color> {
+    fn get_illumination_at(&self, intersection: &RayIntersection) -> Vec<LightIntersection> {
         self.get_illuminator().get_illumination_at(intersection, self)
     }
 }
