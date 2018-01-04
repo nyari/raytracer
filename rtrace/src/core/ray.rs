@@ -1,7 +1,6 @@
 use defs::{Vector3, Point3, DefNumType, Matrix4};
 use core::RayIntersection;
 use tools::Vector3Extensions;
-use ::na;
 
 
 #[derive(Debug)]
@@ -117,7 +116,7 @@ impl Ray {
             return Err(RayError::InvalidContinuationDirection);
         }
 
-        match RayState::get_continuation(&previous_ray.state, na::distance(previous_ray.get_origin(), &origin)) {
+        match RayState::get_continuation(&previous_ray.state, calculated_direction.length()) {
             Ok (continued_state) => {
                 Ok (Self {  direction: direction,
                             origin: origin,
