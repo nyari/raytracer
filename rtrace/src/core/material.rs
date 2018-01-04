@@ -6,7 +6,6 @@ use core::color::{Color, FresnelIndex};
 use defs::DefNumType;
 
 pub trait ColorCalculator {
-    fn new() -> Self;
     fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster) -> Option<Color>;
 }
 

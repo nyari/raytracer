@@ -51,3 +51,9 @@ impl<T: Model> Model for ModelViewModelWrapper<T> {
         }
     }
 }
+
+
+pub trait Intersector {    
+    fn get_intersections_reverse_ordered(&self, ray: &Ray) -> Vec<RayIntersection>;
+    fn get_nearest_intersection(&self, ray: &Ray) -> Option<RayIntersection>;
+}

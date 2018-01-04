@@ -1,63 +1,45 @@
 use defs::{Vector3, Point3, DefNumType, Matrix4};
 use core::RayIntersection;
+use tools::Vector3Extensions;
+use ::na;
+
 
 #[derive(Debug)]
-pub struct Ray {
-    direction : Vector3,
-    origin : Point3,
-    distance_to_origin : DefNumType,
-    inside_counter : i32,
-    depth_counter : i32
+pub enum RayError {
+    DepthLimitReached,
+    InvalidContinuationDirection,
 }
 
 
-impl Ray {
-    pub fn new(origin: Point3, dir: Vector3) -> Self {
-        Self    { direction: dir.normalize(),
-                  origin: origin,
-                  distance_to_origin: 0.0,
-                  inside_counter: 0,
-                  depth_counter: 0 }
-    }
+#[derive(Clone, Copy, Debug)]
+pub struct RayState {
+    distance_to_origin : DefNumType,
+    inside_counter : i32,
+    depth_counter : i32,
+    depth_limit: Option<u32>,
+}
 
-    pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Self {
-        Self    { direction: direction.normalize() ,
-                  origin: *intersection.get_intersection_point(),
-                  distance_to_origin: intersection.get_distance_to_intersection() + intersection.get_ray_travel_distance(),
-                  inside_counter: intersection.get_ray_inside_counter(),
-                  depth_counter: intersection.get_ray_depth_counter() + 1}
-    }
-
-    pub fn continue_ray_from_previous(previous_ray: &Ray, origin: Point3, direction: Vector3) -> Self {
-        Self    { direction : direction.normalize(),
-                  origin : origin,
-                  depth_counter : previous_ray.depth_counter + 1,
-                  ..*previous_ray}
-    }
-
-    pub fn new_reversed_ray(ray: &Ray) -> Self {
-        Self    { direction: (-ray.direction).normalize(),
-                  ..*ray }
-    }
-
-    pub fn get_transformed(&self, point_and_dir_mx: (&Matrix4, &Matrix4)) -> Self {
-        let (point_tf_mx, vector_tf_mx) = point_and_dir_mx;
-
-        let origin = self.origin.to_homogeneous();
-        let direction = self.direction.to_homogeneous();
-
-        Self    { origin: Point3::from_homogeneous(point_tf_mx * origin).expect("Unhomogeneous transformed point"),
-                  direction: Vector3::from_homogeneous(vector_tf_mx * direction).expect("Unhomogeneous transformed vector"),
-                  ..*self
+impl RayState {
+    pub fn get_continuation(input: &Self, distance_to_intersection: DefNumType) -> Result<Self, RayError> {
+        match input.depth_limit {
+            Some(depth_limit) => {
+                if depth_limit >= 1 {
+                    Ok (Self {  distance_to_origin: input.distance_to_origin + distance_to_intersection,
+                                depth_counter: input.depth_counter + 1,
+                                depth_limit: Some(depth_limit - 1),
+                                ..*input
+                    })
+                } else {
+                    Err(RayError::DepthLimitReached)
+                }
+            },
+            None => {
+                    Ok (Self {  distance_to_origin: input.distance_to_origin + distance_to_intersection,
+                                depth_counter: input.depth_counter + 1,
+                                ..*input
+                    })
+            }
         }
-    }
-
-    pub fn get_origin(&self) -> &Point3 {
-        &self.origin
-    }
-
-    pub fn get_direction(&self) -> &Vector3 {
-        &self.direction
     }
 
     pub fn get_distance_to_origin(&self) -> DefNumType {
@@ -90,6 +72,116 @@ impl Ray {
 }
 
 
+#[derive(Debug)]
+pub struct Ray {
+    direction : Vector3,
+    origin : Point3,
+    state : RayState
+}
+
+impl Ray {
+    pub fn new(origin: Point3, dir: Vector3) -> Self {
+        Self    { direction: dir.normalize(),
+                  origin: origin,
+                  state: RayState { distance_to_origin: 0.0,
+                                    inside_counter: 0,
+                                    depth_counter: 0,
+                                    depth_limit: None }
+        }
+    }
+
+    pub fn new_depth_limited(origin: Point3, dir: Vector3, depth_limit: u32) -> Self {
+        Self    { direction: dir.normalize(),
+                  origin: origin,
+                  state: RayState { distance_to_origin: 0.0,
+                                    inside_counter: 0,
+                                    depth_counter: 0,
+                                    depth_limit: Some(depth_limit) }
+        }
+    }
+
+    pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Result<Self, RayError> {
+        match RayState::get_continuation(intersection.get_itersector_ray_state(), intersection.get_distance_to_intersection()) {
+            Ok (continued_state) => {
+                Ok (Self {  direction: direction.normalize(),
+                            origin: *intersection.get_intersection_point(),
+                            state: continued_state})
+            },
+            Err(e) => Err(e)
+        }
+    }
+
+    pub fn continue_ray_from_previous(previous_ray: &Ray, origin: Point3, direction: Vector3) -> Result<Self, RayError> {
+        let calculated_direction = origin - previous_ray.get_origin();
+        if !direction.same_direction_as(&calculated_direction) {
+            return Err(RayError::InvalidContinuationDirection);
+        }
+
+        match RayState::get_continuation(&previous_ray.state, na::distance(previous_ray.get_origin(), &origin)) {
+            Ok (continued_state) => {
+                Ok (Self {  direction: direction,
+                            origin: origin,
+                            state: continued_state})
+            },
+            Err(e) => Err(e)
+        }
+    }
+
+    pub fn new_reversed_ray(ray: &Ray) -> Self {
+        Self    { direction: (-ray.direction).normalize(),
+                  ..*ray }
+    }
+
+    pub fn get_transformed(&self, point_and_dir_mx: (&Matrix4, &Matrix4)) -> Self {
+        let (point_tf_mx, vector_tf_mx) = point_and_dir_mx;
+
+        let origin = self.origin.to_homogeneous();
+        let direction = self.direction.to_homogeneous();
+
+        Self    { origin: Point3::from_homogeneous(point_tf_mx * origin).expect("Unhomogeneous transformed point"),
+                  direction: Vector3::from_homogeneous(vector_tf_mx * direction).expect("Unhomogeneous transformed vector"),
+                  ..*self
+        }
+    }
+
+    pub fn get_origin(&self) -> &Point3 {
+        &self.origin
+    }
+
+    pub fn get_direction(&self) -> &Vector3 {
+        &self.direction
+    }
+
+    pub fn get_distance_to_origin(&self) -> DefNumType {
+        self.state.get_distance_to_origin()
+    }
+
+    pub fn get_inside_counter(&self) -> i32 {
+        self.state.get_inside_counter()
+    }
+
+    pub fn is_ray_inside_object(&self) -> bool {
+        self.state.is_ray_inside_object()
+    }
+
+    pub fn get_depth_counter(&self) -> i32 {
+        self.state.get_depth_counter()
+    }
+
+    pub fn enter_object(&mut self) {
+        self.state.enter_object()
+    }
+
+    pub fn leave_object(&mut self) {
+        self.state.leave_object()
+    }
+
+    pub fn get_state(&self) -> RayState {
+        self.state
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,7 +205,7 @@ mod tests {
                                                 &initial_ray,
                                                 Material::new_useless(),
                                                 false);
-        let continued_ray = Ray::continue_ray_from_intersection(&intersection, Vector3::new(0.0, 1.0, 0.0));
+        let continued_ray = Ray::continue_ray_from_intersection(&intersection, Vector3::new(0.0, 1.0, 0.0)).unwrap();
 
         assert_eq!(continued_ray.get_depth_counter(), 1);
         assert_eq!(continued_ray.get_distance_to_origin(), 1.0);

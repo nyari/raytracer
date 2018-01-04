@@ -1,6 +1,6 @@
 use defs::{DefNumType, Point3, Vector3, Matrix4};
 
-use core::{Ray, Material};
+use core::{Ray, RayState, Material};
 
 use ::na;
 
@@ -11,18 +11,14 @@ pub struct RayIntersection {
     material_at_intersection : Material,
     distance_to_intersection : DefNumType,
     was_inside : bool,
-    ray_travel_distance: DefNumType,
-    ray_depth_count: i32,
-    ray_inside_count: i32
+    ray_state : RayState
 }
 
 impl RayIntersection {
     pub fn new(normal: Vector3, point: Point3, ray: & Ray, material: Material, was_inside: bool) -> Self {
         Self {  normal: normal, 
                 point: point, 
-                ray_travel_distance: ray.get_distance_to_origin(),
-                ray_depth_count: ray.get_depth_counter(),
-                ray_inside_count: ray.get_inside_counter(),
+                ray_state: ray.get_state(),
                 material_at_intersection: material,
                 distance_to_intersection: na::distance(ray.get_origin(), &point),
                 was_inside: was_inside
@@ -41,16 +37,8 @@ impl RayIntersection {
         self.distance_to_intersection
     }
 
-    pub fn get_ray_travel_distance(&self) -> DefNumType {
-        self.ray_travel_distance
-    }
-
-    pub fn get_ray_depth_counter(&self) -> i32 {
-        self.ray_depth_count
-    }
-
-    pub fn get_ray_inside_counter(&self) -> i32 {
-        self.ray_inside_count
+    pub fn get_itersector_ray_state(&self) -> &RayState {
+        &self.ray_state
     }
 
     pub fn get_material(&self) -> &Material {

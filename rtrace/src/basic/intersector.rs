@@ -13,18 +13,6 @@ pub struct SimpleIntersector<> {
 }
 
 impl Intersector for SimpleIntersector {
-    fn new(models: ModelVec) -> Self {
-        Self {models: models}
-    }
-
-    fn get_models(&self) -> &ModelVec {
-        &self.models
-    }
-
-    fn get_models_mut(&mut self) -> &mut ModelVec {
-        &mut self.models
-    }
-    
     fn get_intersections_reverse_ordered(&self, ray: &Ray) -> Vec<RayIntersection> { //Nearest elem is last
         let mut result: Vec<RayIntersection> = self.models.iter().filter_map(|model_box| model_box.get_intersection(ray)).collect();
 
