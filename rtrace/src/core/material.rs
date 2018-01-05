@@ -6,12 +6,20 @@ pub trait ColorCalculator {
     fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster, illumination_caster: &IlluminationCaster) -> Option<Color>;
 }
 
+
+pub struct FresnelData {
+    n: FresnelIndex,
+    n_inverse: FresnelIndex,
+    n_
+}
+
 pub struct Material {
     ambient: Option<Color>,
     diffuse: Option<Color>,
     specular: Option<(Color, DefNumType)>,
-    reflect: Option<FresnelIndex>,
-    refract: Option<FresnelIndex>,
+    fresnel: Option<FresnelData>,
+    is_reflective: bool,
+    is_refractive: bool,
 }
 
 impl Material {
