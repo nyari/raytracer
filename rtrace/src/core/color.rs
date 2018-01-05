@@ -1,46 +1,48 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
 use std::cmp::{Ordering};
 
-use defs::DefNumType;
+use defs::{DefNumType, DefComplexType};
 use tools::CompareWithTolerance;
 
+use num::traits::{Zero, One};
+
 #[derive(Debug, Clone, Copy)]
-pub struct Color {
-    r: DefNumType,
-    g: DefNumType,
-    b: DefNumType,
+pub struct ColorBase<T> {
+    r: T,
+    g: T,
+    b: T,
 }
 
-impl Color {
-    pub fn new(r: DefNumType, g: DefNumType, b: DefNumType) -> Self {
+impl<T: Add + AddAssign + Sub + SubAssign + Mul + MulAssign + Zero + One> ColorBase<T> {
+    pub fn new(r: T, g: T, b: T) -> Self {
         Self {r: r,
               g: g,
               b: b}
     }
 
-    pub fn get(&self) -> (DefNumType, DefNumType, DefNumType) {
+    pub fn get(&self) -> (T, T, T) {
         (self.r, self.g, self.b)
     }
 
-    pub fn equal_eps(&self, other: &Color) -> bool {
+    pub fn equal_eps(&self, other: &ColorBase<T>) -> bool {
         self.r.compare_eps(&other.r) == Ordering::Equal && 
         self.g.compare_eps(&other.g) == Ordering::Equal && 
         self.b.compare_eps(&other.b) == Ordering::Equal
     }
 
     pub fn normalize(&mut self) {
-        self.r = self.r.min(1.0);
-        self.g = self.g.min(1.0);
-        self.b = self.b.min(1.0);
+        self.r = self.r.min(T::one());
+        self.g = self.g.min(T::one());
+        self.b = self.b.min(T::one());
     }
 
-    pub fn normalized(&self) -> Color {
+    pub fn normalized(&self) -> ColorBase<T> {
         let mut result = self.clone();
         result.normalize();
         result
     }
 
-    pub fn mul_scalar(&self, other: &DefNumType) -> Self {
+    pub fn mul_scalar(&self, other: &T) -> Self {
         Self {  r: self.r * other,
                 g: self.g * other,
                 b: self.b * other}
@@ -53,77 +55,90 @@ impl Color {
             }
     }
 
-    pub fn avg(&self) -> DefNumType {
-        (self.r + self.g + self.b) / 3.0
+    pub fn avg_intensity(&self) -> T {
+        (self.r + self.g + self.b) / (3.0 * T::one())
+    }
+
+    pub fn scale_normalized(&self) -> Self {
+        let maximum = self.r.max(self.g.max(self.b));
+        if maximum > T::one() {
+            Self {  r: self.r / maximum,
+                    g: self.g / maximum,
+                    b: self.b / maximum
+            }
+        } else {
+            *self
+        }
     }
 
     pub fn zero() -> Self {
-        Self { r: 0.0,
-               g: 0.0,
-               b: 0.0,
+        Self { r: T::zero(),
+               g: T::zero(),
+               b: T::zero(),
         }
     }
 
     pub fn one() -> Self {
-        Self { r: 1.0,
-               g: 1.0,
-               b: 1.0,
+        Self { r: T::one(),
+               g: T::one(),
+               b: T::one(),
         }
     }
 }
 
-impl Add for Color {
-    type Output = Color;
+impl<T: Add<Output=T>> Add for ColorBase<T> {
+    type Output = ColorBase<T>;
 
-    fn add(self, other: Color) -> Color {
+    fn add(self, other: ColorBase<T>) -> ColorBase<T> {
         Self {  r: self.r + other.r,
                 g: self.g + other.g,
                 b: self.b + other.b }
     }
 }
 
-impl AddAssign for Color {
-    fn add_assign(&mut self, other: Color) {
+impl<T: AddAssign> AddAssign for ColorBase<T> {
+    fn add_assign(&mut self, other: ColorBase<T>) {
         self.r += other.r;
         self.g += other.g;
         self.b += other.b;
     }
 }
 
-impl Sub for Color {
-    type Output = Color;
+impl<T: Sub<Output=T>> Sub for ColorBase<T> {
+    type Output = ColorBase<T>;
 
-    fn sub(self, other: Color) -> Color {
+    fn sub(self, other: ColorBase<T>) -> ColorBase<T> {
         Self {r: self.r - other.r,
                g: self.g - other.g,
                b: self.b - other.b}
     }
 }
+impl<T: SubAssign> SubAssign for ColorBase<T> {
 
-impl SubAssign for Color {
-    fn sub_assign(&mut self, other: Color) {
+    fn sub_assign(&mut self, other: ColorBase<T>) {
         self.r -= other.r;
         self.g -= other.g;
         self.b -= other.b;
     }
 }
 
-impl Mul for Color {
-    type Output = Color;
+impl<T: Mul<Output=T>> Mul for ColorBase<T> {
+    type Output = ColorBase<T>;
 
-    fn mul(self, other: Color) -> Color {
+    fn mul(self, other: ColorBase<T>) -> ColorBase<T> {
         Self {r: self.r * other.r,
                g: self.g * other.g,
                b: self.b * other.b}
     }
 }
 
-impl MulAssign for Color {
-    fn mul_assign(&mut self, other: Color) {
+impl<T: MulAssign> MulAssign for ColorBase<T> {
+    fn mul_assign(&mut self, other: ColorBase<T>) {
         self.r *= other.r;
         self.g *= other.g;
         self.b *= other.b;
     }
 }
 
-pub type FresnelIndex = Color;
+pub type Color = ColorBase<DefNumType>;
+pub type FresnelIndex = ColorBase<DefComplexType>;

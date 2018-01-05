@@ -1,4 +1,7 @@
+use num::Complex;
+
 pub type DefNumType = f64;
+pub type DefComplexType = Complex<DefNumType>;
 
 pub type VectorRow4 = super::na::core::Matrix1x4<DefNumType>;
 pub type VectorColumn4 = super::na::core::Vector4<DefNumType>;
