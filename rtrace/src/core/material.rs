@@ -1,6 +1,7 @@
 use core::{RayCaster, Color, FresnelIndex, RayIntersection, IlluminationCaster};
 
 use defs::DefNumType;
+use ::na;
 
 pub trait ColorCalculator {
     fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster, illumination_caster: &IlluminationCaster) -> Option<Color>;
@@ -39,12 +40,13 @@ impl FresnelData {
         }
     }
 
-    fn get_fresnel_reflect(&self, view_and_normal_angle_cosine: DefNumType) -> Color {
+    pub fn get_fresnel_reflect(&self, intersection: &RayIntersection) -> Color {
+        let view_and_normal_angle_cosine = na::angle(&intersection.get_view_direction(), intersection.get_normal_vector()).cos();
         (Color::one()-self.f0) * Color::one().mul_scalar(&(1.0 - view_and_normal_angle_cosine).powi(5))
     }
 
-    fn get_fresnel_refract(&self, view_and_normal_angle_cosine: DefNumType) -> Color {
-        Color::one() - self.get_fresnel_reflect(view_and_normal_angle_cosine)
+    pub fn get_fresnel_refract(&self, intersection: &RayIntersection) -> Color {
+        Color::one() - self.get_fresnel_reflect(intersection)
     }
 }
 

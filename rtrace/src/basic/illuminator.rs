@@ -1,4 +1,6 @@
-use core::{RayIntersection, RayCaster, LightIntersection, LightSourceVec, Illuminator};
+use core::{RayIntersection, RayCaster, LightIntersection, LightSource, Illuminator};
+
+pub type LightSourceVec = Vec<Box<LightSource>>;
 
 pub struct SimpleIlluminator {
     lights : LightSourceVec

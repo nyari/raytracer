@@ -1,5 +1,4 @@
 use core::Intersector;
-use core::ModelVec;
 
 use core::Model;
 use core::RayIntersection;
@@ -7,6 +6,8 @@ use core::Ray;
 
 use tools::CompareWithTolerance;
 
+
+pub type ModelVec = Vec<Box<Model>>;
 
 pub struct SimpleIntersector<> {
     models: ModelVec,

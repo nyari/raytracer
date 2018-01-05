@@ -1,17 +1,30 @@
-use core::{FresnelData, RayCaster, RayIntersection, Color, ColorCalculator, IlluminationCaster, LightIntersection};
+use core::{FresnelData, RayCaster, RayIntersection, Color, ColorCalculator, IlluminationCaster, LightIntersection, Ray, RayError};
 use defs::Vector3;
 
-fn get_mirror_direction(view: &Vector3, normal: &Vector3) -> Vector3 {
+fn get_mirror_direction(intersection: &RayIntersection) -> Vector3 {
+    let view = intersection.get_view_direction();
+    let normal = intersection.get_normal_vector();
+
     (-view + (normal * 2.0)).normalize()
 }
 
-fn get_refract_direction(view: &Vector3, normal: &Vector3, fresnel_data: &FresnelData) -> Vector3 {
-    let cosa = normal.dot(view);
-    let rooted = 1-((1-cosa.powi(2)) / fresnel_data.n_avg.powi(2))
+fn get_refract_direction(intersection: &RayIntersection, fresnel_data: &FresnelData) -> Vector3 {
+    let view = intersection.get_view_direction();
+    let normal = intersection.get_normal_vector();
+
+    let cosa = normal.dot(&view);
+    let rooted = 1.0-((1.0-cosa.powi(2)) / fresnel_data.n_avg.powi(2));
     if rooted < 0.0 {
         panic!("Impossible value for view and normal direction");
     }
-    
+
+    let nf = if intersection.was_inside() {
+        fresnel_data.n_avg.recip()
+    } else {
+        fresnel_data.n_avg
+    };
+
+    view * (-nf.recip()) + normal * (cosa/nf - rooted.sqrt())
 }
 
 pub struct SimpleColorCalculator {
@@ -52,16 +65,21 @@ impl SimpleColorCalculator {
     fn get_reflected_color(&self, intersection: &RayIntersection, ray_caster: &RayCaster) -> Color {
         let material = intersection.get_material();
         if material.is_reflective() {
-            let mirror_direction = get_mirror_direction(intersection.get_view_direction(), intersection.get_normal_vector());
-            let mirror_ray = Ray::continue_ray_from_intersection(intersection, mirror_direction);
-            let ray_cast_result = ray_caster.cast_ray(mirror_ray);
+            let mirror_direction = get_mirror_direction(intersection);
+            match Ray::continue_ray_from_intersection(intersection, mirror_direction) {
+                Ok(mirror_ray) => {
+                    let ray_cast_result = ray_caster.cast_ray(&mirror_ray);
 
-            match ray_cast_result {
-                Some(color) => {
-                    let fresnel_reflect = material.get_fresnel_data().unwrap();
-                    fresnel_reflect.f0 * color
+                    match ray_cast_result {
+                        Some(color) => {
+                            let fresnel_reflect = material.get_fresnel_data().unwrap();
+                            fresnel_reflect.get_fresnel_reflect(intersection) * color
+                        },
+                        None => Color::zero()
+                    }
                 },
-                None => Color::zero()
+                Err(RayError::DepthLimitReached) => Color::zero(),
+                Err(_) => panic!("Unhandled ray continuation error!")
             }
         } else {
             Color::zero()
@@ -69,7 +87,27 @@ impl SimpleColorCalculator {
     }
 
     fn get_refracted_color(&self, intersection: &RayIntersection, ray_caster: &RayCaster, illuminations: &Vec<LightIntersection>) -> Color {
-        Color::zero()
+        let material = intersection.get_material();
+        if material.is_refractive() {
+            let fresnel_data = material.get_fresnel_data().unwrap();
+            let refract_direction = get_refract_direction(intersection, fresnel_data);
+            match Ray::continue_ray_from_intersection(intersection, refract_direction) {
+                Ok(refract_ray) => {
+                    let ray_cast_result = ray_caster.cast_ray(&refract_ray);
+
+                    match ray_cast_result {
+                        Some(color) => {
+                            fresnel_data.get_fresnel_refract(intersection) * color
+                        },
+                        None => Color::zero()
+                    }
+                },
+                Err(RayError::DepthLimitReached) => Color::zero(),
+                Err(_) => panic!("Unhandled ray continuation error!")
+            }
+        } else {
+            Color::zero()
+        }
     }
 }
 
