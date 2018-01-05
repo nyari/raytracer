@@ -1,25 +1,30 @@
-use core::*;
-use core::color::Color;
+use core::{RayIntersection, RayCaster, LightIntersection, LightSource, Illuminator};
+
+pub type LightSourceVec = Vec<Box<LightSource>>;
 
 pub struct SimpleIlluminator {
     lights : LightSourceVec
 }
 
 impl Illuminator for SimpleIlluminator {
-    fn new(lights: LightSourceVec) -> Self {
-        Self {lights : lights}
-    }
-
-    fn get_lights(&self) -> &LightSourceVec {
-        &self.lights
-    }
-
-    fn get_lights_mut(&mut self) -> &mut LightSourceVec{
-        &mut self.lights
-    }
-
-    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &IlluminationCaster) -> Option<Color> {
-        None
-        
+    fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &RayCaster) -> Vec<LightIntersection> {
+        self.lights.iter().filter_map(|light| {
+            match light.get_ray_to_intersection(intersection) {
+                None => None,
+                Some(ray) => {
+                    match illumination_caster.cast_light_ray(&ray, intersection) {
+                        None => None,
+                        Some(illumintaion_shadowing) => {
+                            match light.get_illumination_at(intersection) {
+                                None => None,
+                                Some(illumination) => {
+                                    Some(illumination.get_shadowed(&illumintaion_shadowing))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }).collect()
     }
 }

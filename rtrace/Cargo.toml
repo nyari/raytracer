@@ -1,6 +1,6 @@
 [package]
 name = "rtrace"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Nyári Dávid Tamás <nyaridavid@gmail.com>"]
 
 [dependencies]
@@ -9,3 +9,9 @@ num = "~0"
 approx = "~0"
 float-cmp = "~0"
 num-traits = "~0"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 4
