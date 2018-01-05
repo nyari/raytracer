@@ -53,7 +53,7 @@ impl Color {
             }
     }
 
-    pub fn avg(&self) -> DefNumType {
+    pub fn intensity_avg(&self) -> DefNumType {
         (self.r + self.g + self.b) / 3.0
     }
 

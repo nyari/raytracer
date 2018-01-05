@@ -3,7 +3,7 @@ use core::{Ray, RayIntersection};
 
 
 pub trait Model {
-    fn get_intersection (&self, ray: & Ray) -> Option<RayIntersection>;
+    fn get_intersection(&self, ray: &Ray) -> Option<RayIntersection>;
 }
 
 

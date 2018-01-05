@@ -1,11 +1,6 @@
-use core::{Color, Model, LightSource, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector, LightIntersection};
+use core::{Color, LightSource, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector, LightIntersection};
 use tools::{Vector3Extensions};
 
-pub type ModelBoxed = Box<Model + 'static>;
-pub type LightSourceBoxed = Box<LightSource + 'static>;
-
-pub type ModelVec = Vec<ModelBoxed>;
-pub type LightSourceVec = Vec<LightSourceBoxed>;
 
 pub trait RayCaster {
     fn cast_ray(&self, ray: &Ray) -> Option<Color>;

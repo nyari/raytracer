@@ -1,8 +1,17 @@
-use core::{Material, RayCaster, RayIntersection, Color, ColorCalculator, IlluminationCaster, LightIntersection};
+use core::{FresnelData, RayCaster, RayIntersection, Color, ColorCalculator, IlluminationCaster, LightIntersection};
 use defs::Vector3;
 
 fn get_mirror_direction(view: &Vector3, normal: &Vector3) -> Vector3 {
     (-view + (normal * 2.0)).normalize()
+}
+
+fn get_refract_direction(view: &Vector3, normal: &Vector3, fresnel_data: &FresnelData) -> Vector3 {
+    let cosa = normal.dot(view);
+    let rooted = 1-((1-cosa.powi(2)) / fresnel_data.n_avg.powi(2))
+    if rooted < 0.0 {
+        panic!("Impossible value for view and normal direction");
+    }
+    
 }
 
 pub struct SimpleColorCalculator {
@@ -41,18 +50,22 @@ impl SimpleColorCalculator {
     }
 
     fn get_reflected_color(&self, intersection: &RayIntersection, ray_caster: &RayCaster) -> Color {
-        // match Ray::continue_ray_from_intersection(intersection, get_mirror_direction(&intersection.get_view_direction(), intersection.get_normal_vector())) {
-        //     Ok(ray) => {
-        //         match ray_caster.cast_ray(ray) {
-        //             Some(color) => {
+        let material = intersection.get_material();
+        if material.is_reflective() {
+            let mirror_direction = get_mirror_direction(intersection.get_view_direction(), intersection.get_normal_vector());
+            let mirror_ray = Ray::continue_ray_from_intersection(intersection, mirror_direction);
+            let ray_cast_result = ray_caster.cast_ray(mirror_ray);
 
-        //             },
-        //             None => Color::zero()
-        //         }
-        //     },
-        //     Err(_) => Color::zero()
-        // }
-        Color::zero()
+            match ray_cast_result {
+                Some(color) => {
+                    let fresnel_reflect = material.get_fresnel_data().unwrap();
+                    fresnel_reflect.f0 * color
+                },
+                None => Color::zero()
+            }
+        } else {
+            Color::zero()
+        }
     }
 
     fn get_refracted_color(&self, intersection: &RayIntersection, ray_caster: &RayCaster, illuminations: &Vec<LightIntersection>) -> Color {
