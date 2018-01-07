@@ -1,24 +1,24 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign};
 use std::cmp::{Ordering};
 
-use defs::DefNumType;
+use defs::FloatType;
 use tools::CompareWithTolerance;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
-    r: DefNumType,
-    g: DefNumType,
-    b: DefNumType,
+    r: FloatType,
+    g: FloatType,
+    b: FloatType,
 }
 
 impl Color {
-    pub fn new(r: DefNumType, g: DefNumType, b: DefNumType) -> Self {
+    pub fn new(r: FloatType, g: FloatType, b: FloatType) -> Self {
         Self {r: r,
               g: g,
               b: b}
     }
 
-    pub fn get(&self) -> (DefNumType, DefNumType, DefNumType) {
+    pub fn get(&self) -> (FloatType, FloatType, FloatType) {
         (self.r, self.g, self.b)
     }
 
@@ -40,7 +40,7 @@ impl Color {
         result
     }
 
-    pub fn mul_scalar(&self, other: &DefNumType) -> Self {
+    pub fn mul_scalar(&self, other: &FloatType) -> Self {
         Self {  r: self.r * other,
                 g: self.g * other,
                 b: self.b * other}
@@ -53,7 +53,7 @@ impl Color {
             }
     }
 
-    pub fn intensity_avg(&self) -> DefNumType {
+    pub fn intensity_avg(&self) -> FloatType {
         (self.r + self.g + self.b) / 3.0
     }
 

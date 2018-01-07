@@ -1,4 +1,4 @@
-use defs::{DefNumType, Point3, Vector3, Matrix4};
+use defs::{FloatType, Point3, Vector3, Matrix4};
 
 use core::{Ray, Material};
 
@@ -9,7 +9,7 @@ pub struct RayIntersection {
     normal : Vector3,
     point : Point3,
     material_at_intersection : Material,
-    distance_to_intersection : DefNumType,
+    distance_to_intersection : FloatType,
     was_inside : bool,
     ray : Ray
 }
@@ -33,7 +33,7 @@ impl RayIntersection {
         &self.normal
     }
 
-    pub fn get_distance_to_intersection(&self) -> DefNumType {
+    pub fn get_distance_to_intersection(&self) -> FloatType {
         self.distance_to_intersection
     }
 

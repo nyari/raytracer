@@ -1,4 +1,4 @@
-use defs::{Vector3, Point3, DefNumType, Matrix4};
+use defs::{Vector3, Point3, FloatType, Matrix4};
 use core::RayIntersection;
 use tools::Vector3Extensions;
 
@@ -12,14 +12,14 @@ pub enum RayError {
 
 #[derive(Clone, Copy, Debug)]
 pub struct RayState {
-    distance_to_origin : DefNumType,
+    distance_to_origin : FloatType,
     inside_counter : i32,
     depth_counter : i32,
     depth_limit: Option<u32>,
 }
 
 impl RayState {
-    pub fn get_continuation(input: &Self, distance_to_intersection: DefNumType) -> Result<Self, RayError> {
+    pub fn get_continuation(input: &Self, distance_to_intersection: FloatType) -> Result<Self, RayError> {
         match input.depth_limit {
             Some(depth_limit) => {
                 if depth_limit >= 1 {
@@ -41,7 +41,7 @@ impl RayState {
         }
     }
 
-    pub fn get_distance_to_origin(&self) -> DefNumType {
+    pub fn get_distance_to_origin(&self) -> FloatType {
         self.distance_to_origin
     }
 
@@ -151,7 +151,7 @@ impl Ray {
         &self.direction
     }
 
-    pub fn get_distance_to_origin(&self) -> DefNumType {
+    pub fn get_distance_to_origin(&self) -> FloatType {
         self.state.get_distance_to_origin()
     }
 

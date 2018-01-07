@@ -1,6 +1,6 @@
 use core::{RayCaster, Color, FresnelIndex, RayIntersection, IlluminationCaster};
 
-use defs::DefNumType;
+use defs::FloatType;
 use ::na;
 
 pub trait ColorCalculator {
@@ -10,14 +10,14 @@ pub trait ColorCalculator {
 pub struct FresnelData {
     pub n: FresnelIndex,
     pub n_inverse: FresnelIndex,
-    pub n_avg: DefNumType,
+    pub n_avg: FloatType,
     pub n_imaginary: FresnelIndex,
     pub n_imaginary_inverse: FresnelIndex,
-    pub n_imaginary_avg: DefNumType,
+    pub n_imaginary_avg: FloatType,
     pub f0: FresnelIndex,
-    pub f0_avg: DefNumType,
+    pub f0_avg: FloatType,
     pub f0_inverse: FresnelIndex,
-    pub f0_inverse_avg: DefNumType
+    pub f0_inverse_avg: FloatType
 }
 
 impl FresnelData {
@@ -54,7 +54,7 @@ impl FresnelData {
 pub struct Material {
     ambient: Option<Color>,
     diffuse: Option<Color>,
-    specular: Option<(Color, DefNumType)>,
+    specular: Option<(Color, FloatType)>,
     fresnel: Option<FresnelData>,
     reflective: bool,
     refractive: bool,
@@ -80,7 +80,7 @@ impl Material {
                refractive: false}
     }
 
-    pub fn new_shiny(diffuse: Color, specular: (Color, DefNumType), ambient: Option<Color>) -> Self {
+    pub fn new_shiny(diffuse: Color, specular: (Color, FloatType), ambient: Option<Color>) -> Self {
         Self { diffuse: Some(diffuse),
                ambient: ambient,
                specular: Some(specular),
@@ -89,7 +89,7 @@ impl Material {
                refractive: false}
     }
 
-    pub fn new_reflective(fresnel_real: FresnelIndex, fresnel_imagninary: FresnelIndex, diffuse: Option<Color>, specular: Option<(Color, DefNumType)>, ambient: Option<Color>) -> Self {
+    pub fn new_reflective(fresnel_real: FresnelIndex, fresnel_imagninary: FresnelIndex, diffuse: Option<Color>, specular: Option<(Color, FloatType)>, ambient: Option<Color>) -> Self {
         Self { diffuse: diffuse,
                ambient: ambient,
                specular: specular,
@@ -98,7 +98,7 @@ impl Material {
                refractive: false}
     }
 
-    pub fn new_refractive(fresnel_real: FresnelIndex, fresnel_imagninary: FresnelIndex, diffuse: Option<Color>, specular: Option<(Color, DefNumType)>, ambient: Option<Color>) -> Self {
+    pub fn new_refractive(fresnel_real: FresnelIndex, fresnel_imagninary: FresnelIndex, diffuse: Option<Color>, specular: Option<(Color, FloatType)>, ambient: Option<Color>) -> Self {
         Self { diffuse: diffuse,
                ambient: ambient,
                specular: specular,
@@ -107,7 +107,7 @@ impl Material {
                refractive: true}
     }
 
-    pub fn new_reflective_and_refractive(fresnel_real: FresnelIndex, fresnel_imagninary: FresnelIndex, diffuse: Option<Color>, specular: Option<(Color, DefNumType)>, ambient: Option<Color>) -> Self {
+    pub fn new_reflective_and_refractive(fresnel_real: FresnelIndex, fresnel_imagninary: FresnelIndex, diffuse: Option<Color>, specular: Option<(Color, FloatType)>, ambient: Option<Color>) -> Self {
         Self { diffuse: diffuse,
                ambient: ambient,
                specular: specular,
@@ -124,7 +124,7 @@ impl Material {
         self.diffuse.as_ref()
     }
 
-    pub fn get_specular_color(&self) -> Option<&(Color, DefNumType)> {
+    pub fn get_specular_color(&self) -> Option<&(Color, FloatType)> {
         self.specular.as_ref()
     }
 

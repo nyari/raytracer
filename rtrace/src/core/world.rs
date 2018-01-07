@@ -1,4 +1,4 @@
-use core::{Color, LightSource, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector, LightIntersection};
+use core::{Color, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector, LightIntersection};
 use tools::{Vector3Extensions};
 
 
