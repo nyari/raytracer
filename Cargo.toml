@@ -5,3 +5,4 @@ authors = ["Nyári Dávid Tamás <nyaridavid@gmail.com>"]
 
 [dependencies]
 rtrace = { path = "./rtrace", version = "0.0.1"}
+image = "*"
