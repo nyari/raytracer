@@ -1,6 +1,7 @@
 use defs::{Point3, Vector3, Point2Int, FloatType, IntType};
 use core::{Ray};
 use tools;
+use ::na;
 
 pub enum ScreenError {
     PixelOutOfBoundsError
@@ -22,11 +23,17 @@ impl Screen {
         if h_res <= 0 || v_res <= 0 || width.less_eq_eps(0.0) || height.less_eq_eps(0.0) {
             panic!("Invalid screen input values");
         }
+        if !normal.dot(up).near_zero_eps() {
+            panic!("Screen normal and up vectors not in right angle")
+        }
+
+        let normal_normalized = normal.normalize();
+        let up_normalized = up.normalize();
 
         Self {  center: center,
-                normal: normal.normalize(),
-                up: up.normalize(),
-                left: normal.normalize(), up.normalize()
+                normal: normal_normalized,
+                up: up_normalized,
+                left: normal_normalized, up_normalized
                 width: width,
                 height: height,
                 horizontal_resolution: h_res as FloatType,
