@@ -12,7 +12,7 @@ pub type Vector3 = super::na::core::Vector3<FloatType>;
 pub type Point2 = super::na::Point2<FloatType>;
 pub type Vector2 = super::na::Vector2<FloatType>;
 
-pub type Point2Int = super::na::Point2<FloatType>;
-pub type Vector2Int = super::na::Vector2<FloatType>;
+pub type Point2Int = super::na::Point2<IntType>;
+pub type Vector2Int = super::na::Vector2<IntType>;
 
 pub static FLOAT_ULPS_TOLERANCE: i64 = 14;
