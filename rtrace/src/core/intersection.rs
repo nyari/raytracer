@@ -1,9 +1,11 @@
 use defs::{FloatType, Point3, Vector3, Matrix4};
-
 use core::{Ray, Material};
-
+use tools::{CompareWithTolerance};
 use ::na;
 
+pub enum RayIntersectionError {
+    NoRayTravelDistance
+}
 
 pub struct RayIntersection {
     normal : Vector3,
@@ -15,14 +17,19 @@ pub struct RayIntersection {
 }
 
 impl RayIntersection {
-    pub fn new(normal: Vector3, point: Point3, ray: & Ray, material: Material, was_inside: bool) -> Self {
-        Self {  normal: normal.normalize(), 
-                point: point, 
-                ray: *ray,
-                material_at_intersection: material,
-                distance_to_intersection: na::distance(ray.get_origin(), &point),
-                was_inside: was_inside
-             }
+    pub fn new(normal: Vector3, point: Point3, ray: & Ray, material: Material, was_inside: bool) -> Result<Self, RayIntersectionError> {
+        let distance_to_intersection = na::distance(ray.get_origin(), &point);
+        if !distance_to_intersection.near_zero_eps() {
+        Ok (Self {  normal: normal.normalize(), 
+                    point: point, 
+                    ray: *ray,
+                    material_at_intersection: material,
+                    distance_to_intersection: distance_to_intersection,
+                    was_inside: was_inside
+                 })
+        } else {
+            Err(RayIntersectionError::NoRayTravelDistance)
+        }
     }
 
     pub fn get_intersection_point(&self) -> &Point3 {
