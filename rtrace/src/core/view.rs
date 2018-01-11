@@ -1,6 +1,8 @@
 use defs::{Point3, Vector3, Point2Int, FloatType, IntType};
 use core::{Ray};
 use tools::{CompareWithTolerance, Between};
+use na;
+use na::{Unit};
 
 #[derive(Debug)]
 pub enum ScreenError {
@@ -9,9 +11,9 @@ pub enum ScreenError {
 
 pub struct Screen {
     center: Point3,
-    normal: Vector3,
-    up: Vector3,
-    left: Vector3,
+    normal: Unit<Vector3>,
+    up: Unit<Vector3>,
+    left: Unit<Vector3>,
     width: FloatType,
     height: FloatType,
     horizontal_resolution: IntType,
@@ -27,13 +29,13 @@ impl Screen {
             panic!("Screen normal and up vectors not in right angle");
         }
 
-        let normal_normalized = normal.normalize();
-        let up_normalized = up.normalize();
+        let normal_normalized = Unit::new_normalize(normal);
+        let up_normalized = Unit::new_normalize(up);
 
         Self {  center: center,
                 normal: normal_normalized,
                 up: up_normalized,
-                left: normal_normalized.cross(&up_normalized),
+                left: Unit::new_unchecked(normal_normalized.cross(&up_normalized)),
                 width: width,
                 height: height,
                 horizontal_resolution: h_res,
@@ -57,7 +59,7 @@ impl Screen {
         let left = -((coord.x as FloatType - (self.horizontal_resolution as FloatType) / 2.0) * self.width);
         let up = -((coord.y as FloatType - (self.vertical_resolution as FloatType) / 2.0) * self.height);
 
-        self.center + (self.up * up + self.left * left)
+        self.center + (self.up.as_ref() * up + self.left.as_ref() * left)
     }
 
     pub fn get_pixel_coord(&self, coord: Point2Int) -> Result<Point3, ScreenError> {
@@ -77,13 +79,13 @@ impl Screen {
 
 pub struct Eye {
     position: Point3,
-    direction: Vector3,
+    direction: Unit<Vector3>,
 }
 
 impl Eye {
     pub fn new(position: Point3, direction: Vector3) -> Self {
         Self {  position: position,
-                direction: direction.normalize()}
+                direction: Unit::new_normalize(direction)}
     }
 
     pub fn get_position(&self) -> &Point3 {
@@ -91,7 +93,7 @@ impl Eye {
     }
 
     pub fn get_direction(&self) -> &Vector3 {
-        &self.direction
+        &self.direction.as_ref()
     }
 }
 

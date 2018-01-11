@@ -1,14 +1,15 @@
 use defs::{FloatType, Point3, Vector3, Matrix4};
 use core::{Ray, Material};
 use tools::{CompareWithTolerance};
-use ::na;
+use na::{Unit};
+use na;
 
 pub enum RayIntersectionError {
     NoRayTravelDistance
 }
 
 pub struct RayIntersection {
-    normal : Vector3,
+    normal : Unit<Vector3>,
     point : Point3,
     material_at_intersection : Material,
     distance_to_intersection : FloatType,
@@ -20,7 +21,7 @@ impl RayIntersection {
     pub fn new(normal: Vector3, point: Point3, ray: & Ray, material: Material, was_inside: bool) -> Result<Self, RayIntersectionError> {
         let distance_to_intersection = na::distance(ray.get_origin(), &point);
         if !distance_to_intersection.near_zero_eps() {
-        Ok (Self {  normal: normal.normalize(), 
+        Ok (Self {  normal:  Unit::new_normalize(normal), 
                     point: point, 
                     ray: *ray,
                     material_at_intersection: material,
@@ -37,7 +38,7 @@ impl RayIntersection {
     }
 
     pub fn get_normal_vector(&self) -> &Vector3 {
-        &self.normal
+        &self.normal.as_ref()
     }
 
     pub fn get_distance_to_intersection(&self) -> FloatType {
@@ -67,7 +68,7 @@ impl RayIntersection {
         let normal = self.normal.to_homogeneous();
 
         Self    { point: Point3::from_homogeneous(point_tf_mx * point).expect("Unhomogeneous transformed point"),
-                  normal: Vector3::from_homogeneous(vector_tf_mx * normal).expect("Unhomogeneous transformed vector"),
+                  normal: Unit::new_normalize(Vector3::from_homogeneous(vector_tf_mx * normal).expect("Unhomogeneous transformed vector")),
                   ..self
         }
     }

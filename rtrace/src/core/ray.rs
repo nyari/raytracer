@@ -1,6 +1,8 @@
 use defs::{Vector3, Point3, FloatType, Matrix4};
 use core::RayIntersection;
 use tools::Vector3Extensions;
+use na;
+use na::{Unit};
 
 
 #[derive(Debug)]
@@ -73,14 +75,14 @@ impl RayState {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
-    direction : Vector3,
+    direction : Unit<Vector3>,
     origin : Point3,
     state : RayState
 }
 
 impl Ray {
     pub fn new(origin: Point3, dir: Vector3) -> Self {
-        Self    { direction: dir.normalize(),
+        Self    { direction: Unit::new_normalize(dir),
                   origin: origin,
                   state: RayState { distance_to_origin: 0.0,
                                     inside_counter: 0,
@@ -90,7 +92,7 @@ impl Ray {
     }
 
     pub fn new_depth_limited(origin: Point3, dir: Vector3, depth_limit: u32) -> Self {
-        Self    { direction: dir.normalize(),
+        Self    { direction: Unit::new_normalize(dir),
                   origin: origin,
                   state: RayState { distance_to_origin: 0.0,
                                     inside_counter: 0,
@@ -102,7 +104,7 @@ impl Ray {
     pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Result<Self, RayError> {
         match RayState::get_continuation(intersection.get_itersector_ray().get_state(), intersection.get_distance_to_intersection()) {
             Ok (continued_state) => {
-                Ok (Self {  direction: direction.normalize(),
+                Ok (Self {  direction: Unit::new_normalize(direction),
                             origin: *intersection.get_intersection_point(),
                             state: continued_state})
             },
@@ -118,7 +120,7 @@ impl Ray {
 
         match RayState::get_continuation(&previous_ray.state, calculated_direction.length()) {
             Ok (continued_state) => {
-                Ok (Self {  direction: direction,
+                Ok (Self {  direction: Unit::new_normalize(direction),
                             origin: origin,
                             state: continued_state})
             },
@@ -127,7 +129,7 @@ impl Ray {
     }
 
     pub fn new_reversed_ray(ray: &Ray) -> Self {
-        Self    { direction: (-ray.direction).normalize(),
+        Self    { direction: (-ray.direction),
                   ..*ray }
     }
 
@@ -138,7 +140,7 @@ impl Ray {
         let direction = self.direction.to_homogeneous();
 
         Self    { origin: Point3::from_homogeneous(point_tf_mx * origin).expect("Unhomogeneous transformed point"),
-                  direction: Vector3::from_homogeneous(vector_tf_mx * direction).expect("Unhomogeneous transformed vector"),
+                  direction: Unit::new_normalize(Vector3::from_homogeneous(vector_tf_mx * direction).expect("Unhomogeneous transformed vector")),
                   ..*self
         }
     }
@@ -148,7 +150,7 @@ impl Ray {
     }
 
     pub fn get_direction(&self) -> &Vector3 {
-        &self.direction
+        &self.direction.as_ref()
     }
 
     pub fn get_distance_to_origin(&self) -> FloatType {
