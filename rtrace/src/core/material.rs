@@ -7,6 +7,8 @@ pub trait ColorCalculator {
     fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster, illumination_caster: &IlluminationCaster) -> Option<Color>;
 }
 
+
+#[derive(Copy, Clone)]
 pub struct FresnelData {
     pub n: FresnelIndex,
     pub n_inverse: FresnelIndex,
@@ -51,6 +53,7 @@ impl FresnelData {
 }
 
 
+#[derive(Copy, Clone)]
 pub struct Material {
     ambient: Option<Color>,
     diffuse: Option<Color>,
