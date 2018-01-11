@@ -25,11 +25,22 @@ impl Intersector for SimpleIntersector {
     }
 
     fn get_nearest_intersection(&self, ray: &Ray) -> Option<RayIntersection> {
-        let mut all_intersections = self.get_intersections_reverse_ordered(ray);
-
-        match all_intersections.pop() {
-            Some(intersection) => Some(intersection),
-            None => None
-        }
+        self.models.iter().fold(None, |acc, model_box| {
+            match model_box.get_intersection(ray) {
+                Some(intersection) => {
+                    match acc {
+                        Some (accumulated_intersection) => {
+                            if intersection.get_distance_to_intersection().less_eps(&accumulated_intersection.get_distance_to_intersection()) {
+                                Some(intersection)
+                            } else {
+                                Some(accumulated_intersection)
+                            }
+                        },
+                        None => Some(intersection)
+                    }
+                },
+                None => acc
+            }
+        })
     }
 }
