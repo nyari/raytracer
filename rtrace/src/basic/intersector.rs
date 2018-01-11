@@ -1,8 +1,4 @@
-use core::Intersector;
-
-use core::Model;
-use core::RayIntersection;
-use core::Ray;
+use core::{Intersector, Model, RayIntersection, Ray};
 
 use tools::CompareWithTolerance;
 
