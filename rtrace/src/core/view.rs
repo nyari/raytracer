@@ -1,7 +1,6 @@
 use defs::{Point3, Vector3, Point2Int, FloatType, IntType};
 use core::{Ray};
 use tools::{CompareWithTolerance, Between};
-use na;
 use na::{Unit};
 
 #[derive(Debug)]
@@ -11,7 +10,6 @@ pub enum ScreenError {
 
 pub struct Screen {
     center: Point3,
-    normal: Unit<Vector3>,
     up: Unit<Vector3>,
     left: Unit<Vector3>,
     width: FloatType,
@@ -33,9 +31,8 @@ impl Screen {
         let up_normalized = Unit::new_normalize(up);
 
         Self {  center: center,
-                normal: normal_normalized,
                 up: up_normalized,
-                left: Unit::new_unchecked(normal_normalized.cross(&up_normalized)),
+                left: Unit::new_unchecked(up_normalized.cross(&normal_normalized)),
                 width: width,
                 height: height,
                 horizontal_resolution: h_res,
