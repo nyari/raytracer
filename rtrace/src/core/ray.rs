@@ -1,7 +1,6 @@
 use defs::{Vector3, Point3, FloatType, Matrix4};
 use core::RayIntersection;
 use tools::Vector3Extensions;
-use na;
 use na::{Unit};
 
 
@@ -99,6 +98,10 @@ impl Ray {
                                     depth_counter: 0,
                                     depth_limit: Some(depth_limit) }
         }
+    }
+
+    pub fn new_single_shot(origin: Point3, dir: Vector3) -> Self {
+        Self::new_depth_limited(origin, dir, 1)
     }
 
     pub fn continue_ray_from_intersection(intersection: &RayIntersection, direction: Vector3) -> Result<Self, RayError> {
