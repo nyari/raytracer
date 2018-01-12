@@ -1,15 +1,16 @@
 use core::{Ray, RayIntersection, Color, RayCaster};
 use defs::Vector3;
+use na::{Unit};
 
 pub struct LightIntersection {
     illumination: Color,
-    light_direction: Vector3
+    light_direction: Unit<Vector3>
 }
 
 impl LightIntersection {
     pub fn new(illumination: Color, light_direction: Vector3) -> Self {
         Self {  illumination: illumination, 
-                light_direction : light_direction.normalize()}
+                light_direction : Unit::new_normalize(light_direction.normalize())}
     }
 
     pub fn get_shadowed(&self, shadowing: &Color) -> Self {
@@ -22,7 +23,7 @@ impl LightIntersection {
     }
 
     pub fn get_light_direction(&self) -> &Vector3 {
-        &self.light_direction
+        &self.light_direction.as_ref()
     }
 }
 
