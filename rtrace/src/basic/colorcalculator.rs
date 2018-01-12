@@ -87,7 +87,7 @@ impl SimpleColorCalculator {
         }
     }
 
-    fn get_refracted_color(&self, intersection: &RayIntersection, ray_caster: &RayCaster, illuminations: &Vec<LightIntersection>) -> Color {
+    fn get_refracted_color(&self, intersection: &RayIntersection, ray_caster: &RayCaster) -> Color {
         let material = intersection.get_material();
         if material.is_refractive() {
             let fresnel_data = material.get_fresnel_data().unwrap();
@@ -119,7 +119,7 @@ impl ColorCalculator for SimpleColorCalculator {
         let result =    self.get_ambient_color(intersection) +
                         self.get_local_color(intersection, &illuminations) +
                         self.get_reflected_color(intersection, ray_caster) +
-                        self.get_refracted_color(intersection, ray_caster, &illuminations);
+                        self.get_refracted_color(intersection, ray_caster);
 
         Some (result)
     }
