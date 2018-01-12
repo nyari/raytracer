@@ -182,6 +182,15 @@ impl<'view> PortionableViewIterator<'view> {
                 portion_index: index,
                 portion_state: 0}
     }
+
+    pub fn get_screen_coord(&self) -> Point2Int {
+        let screen = self.view.get_screen();
+        let all_count = self.view.get_screen_pixel_count();
+        let portion_length = all_count / self.portion_count;
+        let index = portion_length * self.portion_index + self.portion_state;
+
+        screen.get_nth_pixel_coord(index).expect("PortableViewIterator internal error")
+    }
 }
 
 impl<'view> Iterator for PortionableViewIterator<'view> {
