@@ -6,6 +6,12 @@ pub struct SimpleIlluminator {
     lights : LightSourceVec
 }
 
+impl SimpleIlluminator {
+    pub fn new(lights: LightSourceVec) -> Self {
+        Self {  lights: lights}
+    }
+}
+
 impl Illuminator for SimpleIlluminator {
     fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &RayCaster) -> Vec<LightIntersection> {
         self.lights.iter().filter_map(|light| {

@@ -5,8 +5,14 @@ use tools::CompareWithTolerance;
 
 pub type ModelVec = Vec<Box<Model>>;
 
-pub struct SimpleIntersector<> {
+pub struct SimpleIntersector {
     models: ModelVec,
+}
+
+impl SimpleIntersector {
+    pub fn new(models: ModelVec) -> Self {
+        Self {  models: models}
+    }
 }
 
 impl Intersector for SimpleIntersector {

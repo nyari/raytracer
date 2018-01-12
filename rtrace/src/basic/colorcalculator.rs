@@ -33,6 +33,10 @@ pub struct SimpleColorCalculator {
 }
 
 impl SimpleColorCalculator {
+    pub fn new() -> Self {
+        Self {}
+    }
+
     fn get_ambient_color(&self, intersection: &RayIntersection) -> Color {
         let material = intersection.get_material();
         *material.get_ambient_color().unwrap_or(&Color::zero())
