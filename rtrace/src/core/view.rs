@@ -43,7 +43,7 @@ impl Screen {
 
     pub fn new_unit(center: Point3, normal: Vector3, up: Vector3, width_to_height_ratio: FloatType, height: FloatType, v_res: IntType) -> Self {
         let vertical_resolution = v_res as f64;
-        Self::new(center, normal, up, width_to_height_ratio * height, height, (vertical_resolution * width_to_height_ratio).floor() as IntType, v_res)
+        Self::new(center, normal, up, width_to_height_ratio * height, height, (vertical_resolution * width_to_height_ratio).round() as IntType, v_res)
     }
 
     pub fn get_resolutoion(&self) -> (IntType, IntType) {
