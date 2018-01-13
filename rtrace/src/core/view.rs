@@ -1,6 +1,6 @@
 use defs::{Point3, Vector3, Point2Int, FloatType, IntType};
 use core::{Ray};
-use tools::{CompareWithTolerance, Between};
+use tools::{CompareWithTolerance, Between, Vector3Extensions};
 use na::{Unit};
 
 #[derive(Debug)]
@@ -23,16 +23,18 @@ impl Screen {
         if h_res <= 0 || v_res <= 0 || width.less_eq_eps(&0.0) || height.less_eq_eps(&0.0) {
             panic!("Invalid screen input values");
         }
-        if !normal.dot(&up).near_zero_eps() {
+        if normal.same_direction_as(&up) {
             panic!("Screen normal and up vectors not in right angle");
         }
 
         let normal_normalized = Unit::new_normalize(normal);
         let up_normalized = Unit::new_normalize(up);
+        let left_normlized = Unit::new_unchecked(up_normalized.cross(&normal_normalized));
+        let up_corrected = Unit::new_unchecked(normal_normalized.cross(&up_normalized));
 
         Self {  center: center,
-                up: up_normalized,
-                left: Unit::new_unchecked(up_normalized.cross(&normal_normalized)),
+                up: up_corrected,
+                left: left_normlized,
                 width: width,
                 height: height,
                 horizontal_resolution: h_res,
@@ -60,7 +62,7 @@ impl Screen {
     }
 
     pub fn get_pixel_coord(&self, coord: Point2Int) -> Result<Point3, ScreenError> {
-        if coord.x.between(&0, &self.vertical_resolution) && coord.y.between(&0, &self.vertical_resolution) {
+        if coord.x.between(&0, &self.horizontal_resolution) && coord.y.between(&0, &self.vertical_resolution) {
             Ok(self.get_pixel_coord_core(coord))
         } else {
             Err(ScreenError::PixelOutOfBoundsError)
@@ -71,6 +73,12 @@ impl Screen {
         let x = pixel_index % self.horizontal_resolution;
         let y = pixel_index / self.horizontal_resolution;
         self.get_pixel_coord(Point2Int::new(x, y))
+    }
+
+    pub fn get_nth_pixel_screen_coord(&self, pixel_index: IntType) -> Result<Point2Int, ScreenError> {
+        let x = pixel_index % self.horizontal_resolution;
+        let y = pixel_index / self.horizontal_resolution;
+        Ok(Point2Int::new(x, y))
     }
 }
 
@@ -183,30 +191,27 @@ impl<'view> PortionableViewIterator<'view> {
                 portion_state: 0}
     }
 
-    pub fn get_screen_coord(&self) -> Point2Int {
+    pub fn get_screen_coord(&self, index: &IntType) -> Point2Int {
         let screen = self.view.get_screen();
-        let all_count = self.view.get_screen_pixel_count();
-        let portion_length = all_count / self.portion_count;
-        let index = portion_length * self.portion_index + self.portion_state;
 
-        screen.get_nth_pixel_coord(index).expect("PortableViewIterator internal error")
+        screen.get_nth_pixel_screen_coord(*index).expect("PortableViewIterator internal error")
     }
 }
 
 impl<'view> Iterator for PortionableViewIterator<'view> {
-    type Item = Ray;
-    fn next(&mut self) -> Option<Ray> {
+    type Item = (Ray, Point2Int);
+    fn next(&mut self) -> Option<(Ray, Point2Int)> {
         let all_count = self.view.get_screen_pixel_count();
         let portion_length = all_count / self.portion_count;
         if self.portion_state < portion_length {
             let index = portion_length * self.portion_index + self.portion_state;
             self.portion_state += 1;
-            Some(self.view.get_ray_to_screen_pixel_index(index).expect("PortionableViewIterator internal error"))
+            Some((self.view.get_ray_to_screen_pixel_index(index).expect("PortionableViewIterator internal error"), self.get_screen_coord(&index)))
         } else if self.portion_index == self.portion_count - 1 {
             let index = portion_length * self.portion_index + self.portion_state;
             if index < all_count {
                 self.portion_state += 1;
-                Some(self.view.get_ray_to_screen_pixel_index(index).expect("PortionableViewIterator internal error"))
+                Some((self.view.get_ray_to_screen_pixel_index(index).expect("PortionableViewIterator internal error"), self.get_screen_coord(&index)))
             } else {
                 None
             }
