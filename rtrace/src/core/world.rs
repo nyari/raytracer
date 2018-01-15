@@ -1,5 +1,5 @@
 use core::{Color, Ray, RayIntersection, ColorCalculator, Illuminator, Intersector, LightIntersection};
-use tools::{Vector3Extensions};
+use tools::{Vector3Extensions, CompareWithTolerance};
 
 
 pub trait RayCaster {
@@ -60,15 +60,15 @@ impl<IntersectorType: Intersector,
     fn cast_light_ray(&self, ray: &Ray, intersection: &RayIntersection) -> Option<Color> {
         let origin_to_intersection_vector = intersection.get_intersection_point() - ray.get_origin();
 
-        if !origin_to_intersection_vector.same_direction_as(ray.get_direction()) {
-            panic!("Ray not in the coorect direction for obstacle search!");
-        }
+        // if !origin_to_intersection_vector.same_direction_as(ray.get_direction()) {
+        //     panic!("Ray not in the coorect direction for obstacle search!");
+        // }
         
         let max_length = origin_to_intersection_vector.length();
         let mut resulting_color = Color::one();
 
         for intersection in self.get_intersector().get_intersections_reverse_ordered(ray).iter().rev() {
-            if intersection.get_distance_to_intersection() > max_length {
+            if intersection.get_distance_to_intersection().greater_eq_eps(&max_length) {
                 return Some(resulting_color)
             }
             

@@ -24,7 +24,7 @@ impl Model for SolidUnitSphere {
         let c = origin.x.powi(2) + origin.y.powi(2) + origin.z.powi(2) - 1.0;
 
         let determinant = b.powi(2) - 4.0 * a * c;
-        if determinant.is_sign_negative() {
+        if determinant.less_eps(&0.0) {
             None
         } else {
             let t1 = (-b + determinant.sqrt()) / (2.0 * a);

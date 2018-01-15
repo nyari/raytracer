@@ -117,9 +117,6 @@ impl Ray {
 
     pub fn continue_ray_from_previous(previous_ray: &Ray, origin: Point3, direction: Vector3) -> Result<Self, RayError> {
         let calculated_direction = origin - previous_ray.get_origin();
-        if !direction.same_direction_as(&calculated_direction) {
-            return Err(RayError::InvalidContinuationDirection);
-        }
 
         match RayState::get_continuation(&previous_ray.state, calculated_direction.length()) {
             Ok (continued_state) => {
@@ -189,7 +186,7 @@ impl Ray {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::material::Material;
+    use core::{RayIntersection, RayIntersectionError, Material};
     use defs::*;
 
     #[test]
@@ -208,10 +205,20 @@ mod tests {
                                                 Point3::new(1.0, 0.0, 0.0),
                                                 &initial_ray,
                                                 Material::new_useless(),
-                                                false);
+                                                false).unwrap();
         let continued_ray = Ray::continue_ray_from_intersection(&intersection, Vector3::new(0.0, 1.0, 0.0)).unwrap();
 
         assert_eq!(continued_ray.get_depth_counter(), 1);
         assert_eq!(continued_ray.get_distance_to_origin(), 1.0);
+    }
+
+    #[test]
+    fn test_depth_limits() {
+        let initial_ray = Ray::new_depth_limited(Point3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0), 1);
+        let continue_1 = Ray::continue_ray_from_previous(&initial_ray, Point3::new(1.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0)).expect("Ray should still continue");
+        let continue_2 = Ray::continue_ray_from_previous(&continue_1, Point3::new(2.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 0.0));
+        if !continue_2.is_err() {
+            panic!("Ray should not continue further");
+        }
     }
 }

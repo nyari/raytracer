@@ -13,7 +13,6 @@ pub struct Screen {
     up: Unit<Vector3>,
     left: Unit<Vector3>,
     width: FloatType,
-    height: FloatType,
     horizontal_resolution: IntType,
     vertical_resolution: IntType,
 }
@@ -24,19 +23,18 @@ impl Screen {
             panic!("Invalid screen input values");
         }
         if normal.same_direction_as(&up) {
-            panic!("Screen normal and up vectors not in right angle");
+            panic!("Screen normal and up vectors are pointing in the same direction");
         }
 
         let normal_normalized = Unit::new_normalize(normal);
         let up_normalized = Unit::new_normalize(up);
         let left_normlized = Unit::new_unchecked(up_normalized.cross(&normal_normalized));
-        let up_corrected = Unit::new_unchecked(normal_normalized.cross(&up_normalized));
+        let up_corrected = Unit::new_unchecked(normal_normalized.cross(&left_normlized));
 
         Self {  center: center,
                 up: up_corrected,
                 left: left_normlized,
                 width: width,
-                height: height,
                 horizontal_resolution: h_res,
                 vertical_resolution: v_res}
     }
@@ -56,7 +54,7 @@ impl Screen {
 
     fn get_pixel_coord_core(&self, coord: Point2Int) -> Point3 {
         let left = -((coord.x as FloatType - (self.horizontal_resolution as FloatType) / 2.0) * self.width);
-        let up = -((coord.y as FloatType - (self.vertical_resolution as FloatType) / 2.0) * self.height);
+        let up = -((coord.y as FloatType - (self.vertical_resolution as FloatType) / 2.0) * self.width);
 
         self.center + (self.up.as_ref() * up + self.left.as_ref() * left)
     }
@@ -119,14 +117,15 @@ impl View {
     }
 
     pub fn new_unit(eye_position: Point3, eye_direction: Vector3, screen_up: Vector3, screen_width_to_height_ratio: FloatType, screen_height: FloatType, screen_v_res: IntType) -> Self{
-        Self {  screen: Screen::new_unit(eye_position + eye_direction,
-                                         eye_direction, 
+        let eye_unit_direction = Unit::new_normalize(eye_direction);
+        Self {  screen: Screen::new_unit(eye_position + eye_unit_direction.as_ref(),
+                                         *eye_unit_direction.as_ref(), 
                                          screen_up,
                                          screen_width_to_height_ratio,
                                          screen_height,
                                          screen_v_res),
                 eye: Eye::new(eye_position, 
-                              eye_direction)
+                              *eye_unit_direction.as_ref())
         }
     }
 

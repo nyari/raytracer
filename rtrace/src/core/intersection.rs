@@ -4,6 +4,7 @@ use tools::{CompareWithTolerance};
 use na::{Unit};
 use na;
 
+#[derive(Debug)]
 pub enum RayIntersectionError {
     NoRayTravelDistance
 }
