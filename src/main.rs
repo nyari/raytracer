@@ -11,7 +11,12 @@ use image::{DynamicImage, Rgba, Pixel, GenericImage, ImageFormat};
 
 fn main() {
     let solid_shiny_red = Material::new_shiny(Color::new(0.87, 0.17, 0.08), (Color::new(1.0, 1.0, 1.0), 2.0), None);
-    let sphere = SolidUnitSphere::new(solid_shiny_red);
+    let sphere = {
+        let mut result = ModelViewModelWrapper::new_identity(SolidUnitSphere::new(solid_shiny_red));
+        result.scale_uniform(2.0);
+        result
+    };
+
     let light = DotLightSource::new_natural(Color::one(), 50.0, Point3::new(0.0, 0.0, 8.0));
 
     let intersector = SimpleIntersector::new(vec![Box::new(sphere)]);

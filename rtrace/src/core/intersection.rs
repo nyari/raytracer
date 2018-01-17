@@ -70,6 +70,7 @@ impl RayIntersection {
 
         Self    { point: Point3::from_homogeneous(point_tf_mx * point).expect("Unhomogeneous transformed point"),
                   normal: Unit::new_normalize(Vector3::from_homogeneous(vector_tf_mx * normal).expect("Unhomogeneous transformed vector")),
+                  ray: self.ray.get_transformed(point_and_dir_mx),
                   ..self
         }
     }

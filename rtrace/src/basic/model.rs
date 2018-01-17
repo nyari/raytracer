@@ -91,3 +91,45 @@ impl Model for SolidXYPlane {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::Color;
+
+    fn test_solid_unit_sphere(test_ray: &Ray, expected_result: Option<&Point3>) {
+        let test_material = Material::new_shiny(Color::new(1.0, 1.0, 1.0), (Color::new(1.0, 1.0, 1.0), 1.5), None);
+        let test_sphere = SolidUnitSphere::new(test_material);
+
+        let intersection_result = test_sphere.get_intersection(test_ray);
+
+        match expected_result {
+            Some(expected_point) => {
+                let intersection = intersection_result.expect("Was expected intersection but none intersected");
+
+                assert_relative_eq!(expected_point, intersection.get_intersection_point());
+            },
+            None => {
+                assert!(intersection_result.is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn test_solid_unit_sphere_head_on() {
+        let test_ray = Ray::new_single_shot(Point3::new(2.0, 0.0, 0.0), Vector3::new(-1.0, 0.0, 0.0));
+        test_solid_unit_sphere(&test_ray, Some(&Point3::new(1.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_solid_unit_sphere_tangential_hit() {
+        let test_ray = Ray::new_single_shot(Point3::new(2.0, 0.0, 1.0), Vector3::new(-1.0, 0.0, 0.0));
+        test_solid_unit_sphere(&test_ray, Some(&Point3::new(0.0, 0.0, 1.0)));
+    }
+
+    #[test]
+    fn test_solid_unit_sphere_tangential_miss() {
+        let test_ray = Ray::new_single_shot(Point3::new(2.0, 0.0, 1.01), Vector3::new(-1.0, 0.0, 0.0));
+        test_solid_unit_sphere(&test_ray, None);
+    }
+}
