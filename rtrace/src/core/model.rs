@@ -109,7 +109,7 @@ impl<T: Model> Model for ModelViewModelWrapper<T> {
 
         match self.wrapped_model.get_intersection(&transformed_ray) {
             None => None,
-            Some(transformed_intersection) => Some(transformed_intersection.get_transformed((&self.tf_matrix, &self.tf_matrix)))
+            Some(transformed_intersection) => transformed_intersection.get_transformed((&self.tf_matrix, &self.tf_matrix)).ok()
         }
     }
 }
@@ -228,6 +228,7 @@ mod tests {
 
         assert_relative_eq!(transformed_intersection.get_intersection_point(), &Point3::new(0.0, 0.0, 2.0));
         assert_relative_eq!(transformed_intersection.get_normal_vector(), &Vector3::new(1.0, -1.0, 1.0).normalize());
+        assert_relative_eq!(transformed_intersection.get_distance_to_intersection(), &5.0);
     }
 
     #[test]
@@ -241,6 +242,7 @@ mod tests {
 
         assert_relative_eq!(transformed_intersection.get_intersection_point(), &Point3::new(0.0, 0.0, 2.0));
         assert_relative_eq!(transformed_intersection.get_normal_vector(), &Vector3::new(1.0, 1.0, 1.0).normalize());
+        assert_relative_eq!(transformed_intersection.get_distance_to_intersection(), &5.0);
     }
 
     #[test]
@@ -254,5 +256,6 @@ mod tests {
 
         assert_relative_eq!(transformed_intersection.get_intersection_point(), &Point3::new(0.0, 1.0, 2.0));
         assert_relative_eq!(transformed_intersection.get_normal_vector(), &Vector3::new(1.0, -1.0, 1.0).normalize());
+        assert_relative_eq!(transformed_intersection.get_distance_to_intersection(), &6.0);
     }
 }
