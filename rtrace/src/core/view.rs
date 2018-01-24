@@ -13,6 +13,7 @@ pub struct Screen {
     up: Unit<Vector3>,
     left: Unit<Vector3>,
     width: FloatType,
+    height: FloatType,
     horizontal_resolution: IntType,
     vertical_resolution: IntType,
 }
@@ -35,6 +36,7 @@ impl Screen {
                 up: up_corrected,
                 left: left_normlized,
                 width: width,
+                height: height,
                 horizontal_resolution: h_res,
                 vertical_resolution: v_res}
     }
@@ -53,8 +55,8 @@ impl Screen {
     }
 
     fn get_pixel_coord_core(&self, coord: Point2Int) -> Point3 {
-        let left = -((coord.x as FloatType - (self.horizontal_resolution as FloatType) / 2.0) * self.width);
-        let up = -((coord.y as FloatType - (self.vertical_resolution as FloatType) / 2.0) * self.width);
+        let left = -(((coord.x as FloatType / ((self.horizontal_resolution as FloatType) / 2.0)) - 1.0) * self.width);
+        let up = -(((coord.y as FloatType / ((self.vertical_resolution as FloatType) / 2.0)) - 1.0) * self.height);
 
         self.center + (self.up.as_ref() * up + self.left.as_ref() * left)
     }

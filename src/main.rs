@@ -53,7 +53,7 @@ fn main() {
     let view = View::new_unit(Point3::new(0.0, -5.0, 0.0),
                               Vector3::new(0.0, 5.0, 0.0), 
                               Vector3::new(0.0, 0.0, 1.0),
-                              1.77777777, 0.001, 720);
+                              1.77777777, 1.0, 4320);
 
     let (screen_hor_res, screen_ver_res) = view.get_screen().get_resolutoion();
 
