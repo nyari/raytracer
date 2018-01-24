@@ -182,6 +182,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                     }
                 }
             }
+            thread::sleep_ms(0);
         }
 
         for worker in workers.iter() {
