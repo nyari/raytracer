@@ -18,9 +18,9 @@ pub struct World<IntersectorType, ColorCalculatorType, IlluminatorType> {
     depth_limit : i32,
 }
 
-impl<IntersectorType: Intersector,
-     ColorCalculatorType: ColorCalculator,
-     IlluminatorType : Illuminator> 
+impl<IntersectorType: Intersector + Send + Sync,
+     ColorCalculatorType: ColorCalculator + Send + Sync,
+     IlluminatorType : Illuminator + Send + Sync> 
      World<IntersectorType, ColorCalculatorType, IlluminatorType> {
     
     pub fn new(intersector: IntersectorType, colorcalc: ColorCalculatorType, illuminator: IlluminatorType, ray_depth_limit: i32) -> Self {
@@ -43,9 +43,9 @@ impl<IntersectorType: Intersector,
     }
 }
 
-impl<IntersectorType: Intersector,
-     ColorCalculatorType: ColorCalculator,
-     IlluminatorType : Illuminator> RayCaster for World<IntersectorType, ColorCalculatorType, IlluminatorType> {
+impl<IntersectorType: Intersector + Send + Sync,
+     ColorCalculatorType: ColorCalculator + Send + Sync,
+     IlluminatorType : Illuminator + Send + Sync> RayCaster for World<IntersectorType, ColorCalculatorType, IlluminatorType> {
     fn cast_ray(&self, ray: &Ray) -> Option<Color> {
         if ray.get_depth_counter() <= self.depth_limit {
             match self.get_intersector().get_nearest_intersection(ray) {
@@ -82,9 +82,9 @@ impl<IntersectorType: Intersector,
     }
 }
 
-impl<IntersectorType: Intersector,
-     ColorCalculatorType: ColorCalculator,
-     IlluminatorType : Illuminator> IlluminationCaster for World<IntersectorType, ColorCalculatorType, IlluminatorType> {
+impl<IntersectorType: Intersector + Send + Sync,
+     ColorCalculatorType: ColorCalculator + Send + Sync,
+     IlluminatorType : Illuminator + Send + Sync> IlluminationCaster for World<IntersectorType, ColorCalculatorType, IlluminatorType> {
     fn get_illumination_at(&self, intersection: &RayIntersection) -> Vec<LightIntersection> {
         self.get_illuminator().get_illumination_at(intersection, self)
     }

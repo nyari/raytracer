@@ -27,11 +27,11 @@ impl LightIntersection {
     }
 }
 
-pub trait LightSource {
+pub trait LightSource: Send + Sync {
     fn get_ray_to_intersection(&self, intersection: &RayIntersection) -> Option<Ray>;
     fn get_illumination_at(&self, intersection: &RayIntersection) -> Option<LightIntersection>;
 }
 
-pub trait Illuminator {
+pub trait Illuminator: Send + Sync {
     fn get_illumination_at(&self, intersection: &RayIntersection, illumination_caster: &RayCaster) -> Vec<LightIntersection>;
 }

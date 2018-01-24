@@ -3,7 +3,7 @@ use core::{RayCaster, Color, FresnelIndex, RayIntersection, IlluminationCaster};
 use defs::FloatType;
 use ::na;
 
-pub trait ColorCalculator {
+pub trait ColorCalculator: Send + Sync {
     fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster, illumination_caster: &IlluminationCaster) -> Option<Color>;
 }
 

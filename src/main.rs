@@ -9,7 +9,7 @@ use rtrace::basic::lightsource::{DotLightSource};
 use rtrace::core::{ModelViewModelWrapper, Material, Color, View, PortionableViewIterator, RayCaster};
 use rtrace::defs::{Point3, Point2Int, Vector3, FloatType};
 use image::{DynamicImage, Rgba, Pixel, GenericImage, ImageFormat};
-use renderer::{SingleThreadedRenderer, RendererOutput};
+use renderer::{ParalellRenderer, SingleThreadedRenderer, RendererOutput};
 
 struct ImageRendererOutput {
     image: DynamicImage,
@@ -58,7 +58,7 @@ fn main() {
     let (screen_hor_res, screen_ver_res) = view.get_screen().get_resolutoion();
 
     let renderer_output = ImageRendererOutput::new(screen_hor_res as u32, screen_ver_res as u32);
-    let mut renderer = SingleThreadedRenderer::new(world, view, renderer_output);
+    let mut renderer = ParalellRenderer::new(8, world, view, renderer_output);
     renderer.execute();
 
     match std::fs::File::create("result.png") {

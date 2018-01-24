@@ -2,7 +2,7 @@ use defs::{Matrix4, Vector3, FloatType};
 use core::{Ray, RayIntersection};
 use na::{Similarity3, Rotation3, Translation3, Unit};
 
-pub trait Model {
+pub trait Model: Send + Sync {
     fn get_intersection(&self, ray: &Ray) -> Option<RayIntersection>;
 }
 
@@ -115,7 +115,7 @@ impl<T: Model> Model for ModelViewModelWrapper<T> {
 }
 
 
-pub trait Intersector {    
+pub trait Intersector: Send + Sync {    
     fn get_intersections_reverse_ordered(&self, ray: &Ray) -> Vec<RayIntersection>;
     fn get_nearest_intersection(&self, ray: &Ray) -> Option<RayIntersection>;
 }
