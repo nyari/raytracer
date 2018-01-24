@@ -132,6 +132,34 @@ impl<WorldType: 'static + RayCaster + Sync + Send> ParallelWorker<WorldType> {
 }
 
 
+struct RingIterator<It> {
+    iterator: It,
+    init: It,
+}
+
+
+impl<It: Iterator + Clone> RingIterator<It> {
+    pub fn new(it: It) -> Self {
+        Self {iterator: it.clone(),
+              init: it}
+    }
+}
+
+impl<It: Iterator + Clone> Iterator for RingIterator<It> {
+    type Item = It::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.next() {
+            Some(elem) => Some(elem),
+            None => {
+                self.iterator = self.init.clone();
+                self.next()
+            }
+        }
+    }
+}
+
+
 pub struct ParalellRenderer<WorldType, OutputType> {
     thread_count: u32,
     world: Arc<WorldType>,
@@ -161,27 +189,26 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
         }
 
         for (ray, coord) in PortionableViewIterator::new(&self.view) {
-'selector:  loop {
-                for worker in workers.iter() {
-                    match worker.receive_async() {
-                        Some(message) => {
-                            match message {
-                                WorkerMessage::Ready => {
-                                    worker.send(ControlMessage::CastRay(ray, coord));
-                                    break 'selector;
-                                }
-                                WorkerMessage::Result(color_option, coord) => {
-                                    match color_option {
-                                        Some(color) => { self.output.set_output(coord, color); },
-                                        None => (),
-                                    }
+            for worker in workers.iter() {
+                match worker.receive_async() {
+                    Some(message) => {
+                        match message {
+                            WorkerMessage::Ready => {
+                                worker.send(ControlMessage::CastRay(ray, coord));
+                                break 'selector;
+                            }
+                            WorkerMessage::Result(color_option, coord) => {
+                                match color_option {
+                                    Some(color) => { self.output.set_output(coord, color); },
+                                    None => (),
                                 }
                             }
-                        },
-                        None => (),
-                    }
+                        }
+                    },
+                    None => (),
                 }
             }
+            thread::sleep_ms(0);
         }
 
         for worker in workers.iter() {
