@@ -153,7 +153,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
 
     pub fn execute(&mut self) {
         let mut workers: Vec<ParallelWorker<WorldType>> = Vec::new();
-        for worker_filler in 1..(self.thread_count-1) {
+        for _ in 1..(self.thread_count) {
             workers.push(ParallelWorker::new(self.world.clone()));
         }
         for worker in workers.iter_mut() {
@@ -189,7 +189,6 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                     }
                 }
             }
-            thread::sleep_ms(1);
         }
 
         for worker in workers.iter() {
