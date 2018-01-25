@@ -160,15 +160,22 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
             worker.spawn();
         }
 
-        for (ray, coord) in PortionableViewIterator::new(&self.view) {
-'selector:  loop {
+        {
+            let mut view_iterator = PortionableViewIterator::new(&self.view);
+'msgloop:   loop {
                 for worker in workers.iter() {
                     match worker.receive_async() {
                         Some(message) => {
                             match message {
                                 WorkerMessage::Ready => {
-                                    worker.send(ControlMessage::CastRay(ray, coord));
-                                    break 'selector;
+                                    match view_iterator.next() {
+                                        Some((ray, coord)) => {
+                                            worker.send(ControlMessage::CastRay(ray, coord));
+                                        },
+                                        None => {
+                                            break 'msgloop;
+                                        }
+                                    }
                                 }
                                 WorkerMessage::Result(color_option, coord) => {
                                     match color_option {
@@ -182,11 +189,16 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                     }
                 }
             }
-            thread::sleep_ms(0);
+            thread::sleep_ms(1);
         }
 
         for worker in workers.iter() {
             worker.send(ControlMessage::Exit);
+        }
+        for worker in workers.iter_mut() {
+            worker.join();
+        }
+        for worker in workers.iter() {
             let mut done = false;
             while !done {
                 match worker.receive_async() {
@@ -206,10 +218,6 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                     }
                 }
             }
-        }
-
-        for worker in workers.iter_mut() {
-            worker.join();
         }
     }
 
