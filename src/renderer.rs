@@ -75,7 +75,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send> ParallelWorker<WorldType> {
         self.control_tx = Some(control_tx);
         self.worker_rx = Some(worker_rx);
         
-        let world = self.world.clone();
+        let world = Arc::clone(&self.world);
 
         self.join_handle = Some(thread::spawn(move || {
             worker_tx.send(WorkerMessage::Ready);
