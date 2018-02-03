@@ -42,7 +42,8 @@ fn main() {
     let solid_shiny_green = Material::new_shiny(Color::new(0.07, 0.90, 0.11), (Color::new(1.0, 1.0, 1.0), 7.0), None);
     let solid_shiny_blue = Material::new_shiny(Color::new(0.03, 0.07, 0.93), (Color::new(1.0, 1.0, 1.0), 7.0), None);
     let solid_shiny_white = Material::new_shiny(Color::new(1.0, 1.0, 1.0), (Color::new(1.0, 1.0, 1.0), 4.0), None);
-    let silver = Material::new_reflective(FresnelIndex::new(0.17, 0.17, 0.17), FresnelIndex::new(2.0, 2.0, 2.0), None, None, None);
+    let silver = Material::new_reflective(FresnelIndex::new(0.17, 0.17, 0.17), FresnelIndex::new(2.0, 2.0, 2.0), None, Some((Color::one(), 100.0)), None);
+    let glass = Material::new_reflective_and_refractive(FresnelIndex::new(1.55, 1.5, 1.45), FresnelIndex::one(), None, None, None);
 
     let tan_60 = (PI/3.0).tan();
     
@@ -70,30 +71,43 @@ fn main() {
     let mirror = {
         let mut result = ModelViewModelWrapper::new_identity(SolidXYPlane::new(silver));
         result.rotate(Vector3::new(1.0, 0.0, 0.0), PI/2.0);
-        result.translate(Vector3::new(0.0, 5.0, 0.0));
+        result.translate(Vector3::new(0.0, 7.0, 0.0));
+        result
+    };
+    let mirror_2 = {
+        let mut result = ModelViewModelWrapper::new_identity(SolidXYPlane::new(silver));
+        result.rotate(Vector3::new(0.0, 1.0, 0.0), PI/2.0);
+        result.translate(Vector3::new(-7.0, 0.0, 0.0));
+        result
+    };
+    let lens = {
+        let mut result = ModelViewModelWrapper::new_identity(SolidUnitSphere::new(glass));
+        result.scale_non_uniform(Vector3::new(1.0, 0.4, 1.0));
+        result.rotate(Vector3::new(0.0, 0.0, 1.0), PI/5.0);
+        result.translate(Vector3::new(6.5, -3.5, 3.0));
         result
     };
 
-    let light = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 70.0, Point3::new(8.0, -3.0, 8.0));
-    let light_2 = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 70.0, Point3::new(8.0, 3.0, 8.0));
-//991, 349
+    let light = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 60.0, Point3::new(7.0, -7.0, 8.0));
+    let light_2 = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 40.0, Point3::new(0.0, 0.0, 8.0));
+
     let intersector = SimpleIntersector::new(vec![Box::new(sphere_1),
                                                   Box::new(sphere_2),
                                                   Box::new(sphere_3),
                                                   Box::new(plane),
-                                                  Box::new(mirror)]);
+                                                  Box::new(mirror),
+                                                  Box::new(mirror_2),
+                                                  Box::new(lens)]);
     let illuminator = SimpleIlluminator::new(vec![Box::new(light),
                                                   Box::new(light_2)]);
     let color_calculator = SimpleColorCalculator::new();
 
-    let world = SimpleWorld::new(intersector, color_calculator, illuminator, 5);
+    let world = SimpleWorld::new(intersector, color_calculator, illuminator, 8);
     let view = View::new_unit(Point3::new(7.0, -7.0, 4.0),
                               Vector3::new(-7.0, 7.0, -1.0), 
                               Vector3::new(0.0, 0.0, 1.0),
-                              1.77777777, 1.0, 1080);
+                              1.77777777, 0.8, 4320);
 
-    // let res = world.cast_ray(&view.get_ray_to_screen_coordinate(Point2Int::new(991, 349)).unwrap()).expect("None returned!");
-    // println!("Color: {:?}", res.get());
 
     let (screen_hor_res, screen_ver_res) = view.get_screen().get_resolutoion();
 
