@@ -1,6 +1,6 @@
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver};
-use std::{time, thread};
+use std::{thread};
 
 use rtrace::core::{Color, View, PortionableViewIterator, RayCaster, Ray};
 use rtrace::defs::{Point2Int};
@@ -78,7 +78,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send> ParallelWorker<WorldType> {
         let world = Arc::clone(&self.world);
 
         self.join_handle = Some(thread::spawn(move || {
-            worker_tx.send(WorkerMessage::Ready);
+            worker_tx.send(WorkerMessage::Ready).expect("Initial ready message in worker unhandled");
             loop {
                 match control_rx.recv() {
                     Ok(message) => {
