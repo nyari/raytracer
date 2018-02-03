@@ -1,6 +1,7 @@
 use core::{FresnelData, RayCaster, RayIntersection, Color, ColorCalculator, IlluminationCaster, LightIntersection, Ray, RayError};
 use defs::Vector3;
 use na::Unit;
+use tools::{CompareWithTolerance};
 
 fn get_mirror_direction(intersection: &RayIntersection) -> Unit<Vector3> {
     let view = intersection.get_view_direction();
@@ -9,23 +10,23 @@ fn get_mirror_direction(intersection: &RayIntersection) -> Unit<Vector3> {
     Unit::new_normalize(-view + (normal * 2.0))
 }
 
-fn get_refract_direction(intersection: &RayIntersection, fresnel_data: &FresnelData) -> Unit<Vector3> {
+fn get_refract_direction(intersection: &RayIntersection, fresnel_data: &FresnelData) -> Option<Unit<Vector3>> {
     let view = intersection.get_view_direction();
     let normal = intersection.get_normal_vector();
 
     let cosa = normal.dot(&view);
     let rooted = 1.0-((1.0-cosa.powi(2)) / fresnel_data.n_avg.powi(2));
-    if rooted < 0.0 {
-        panic!("Impossible value for view and normal direction");
-    }
+    if rooted.greater_eq_eps(&0.0) {
+        let nf = if intersection.was_inside() {
+            fresnel_data.n_avg.recip()
+        } else {
+            fresnel_data.n_avg
+        };
 
-    let nf = if intersection.was_inside() {
-        fresnel_data.n_avg.recip()
+        Some(Unit::new_normalize(view * (-nf.recip()) + normal * (cosa/nf - rooted.sqrt())))
     } else {
-        fresnel_data.n_avg
-    };
-
-    Unit::new_normalize(view * (-nf.recip()) + normal * (cosa/nf - rooted.sqrt()))
+        None
+    }
 }
 
 pub struct SimpleColorCalculator {
@@ -98,23 +99,28 @@ impl SimpleColorCalculator {
         let material = intersection.get_material();
         if material.is_refractive() {
             let fresnel_data = material.get_fresnel_data().unwrap();
-            let refract_direction = get_refract_direction(intersection, fresnel_data).unwrap();
-            match Ray::continue_ray_from_intersection(intersection, refract_direction) {
-                Ok(refract_ray) => {
-                    let ray_cast_result = ray_caster.cast_ray(&refract_ray);
+            if let Some(refract_direction_unit) = get_refract_direction(intersection, fresnel_data) {
+                let refract_direction = refract_direction_unit.unwrap();
 
-                    if let Some(color) = ray_cast_result {
-                        if let Some(fresnel_color) = fresnel_data.get_fresnel_refract(intersection) {
-                            fresnel_color * color
+                match Ray::continue_ray_from_intersection(intersection, refract_direction) {
+                    Ok(refract_ray) => {
+                        let ray_cast_result = ray_caster.cast_ray(&refract_ray);
+
+                        if let Some(color) = ray_cast_result {
+                            if let Some(fresnel_color) = fresnel_data.get_fresnel_refract(intersection) {
+                                fresnel_color * color
+                            } else {
+                                Color::zero()
+                            }
                         } else {
                             Color::zero()
                         }
-                    } else {
-                        Color::zero()
-                    }
-                },
-                Err(RayError::DepthLimitReached) => Color::zero(),
-                Err(_) => panic!("Unhandled ray continuation error!")
+                    },
+                    Err(RayError::DepthLimitReached) => Color::zero(),
+                    Err(_) => panic!("Unhandled ray continuation error!")
+                }
+            } else {
+                Color::zero()
             }
         } else {
             Color::zero()
