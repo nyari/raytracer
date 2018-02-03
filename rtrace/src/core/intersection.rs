@@ -4,6 +4,8 @@ use tools::{CompareWithTolerance};
 use na::{Unit};
 use na;
 
+static MIMIMUM_INTERSECTION_DISTANCE: FloatType = 0.000000001;
+
 #[derive(Debug)]
 pub enum RayIntersectionError {
     NoRayTravelDistance
@@ -21,14 +23,14 @@ pub struct RayIntersection {
 impl RayIntersection {
     pub fn new(normal: Vector3, point: Point3, ray: & Ray, material: Material, was_inside: bool) -> Result<Self, RayIntersectionError> {
         let distance_to_intersection = na::distance(ray.get_origin(), &point);
-        if !distance_to_intersection.near_zero_eps() {
-        Ok (Self {  normal:  Unit::new_normalize(normal), 
-                    point: point, 
-                    ray: *ray,
-                    material_at_intersection: material,
-                    distance_to_intersection: distance_to_intersection,
-                    was_inside: was_inside
-                 })
+        if distance_to_intersection.greater_eq_eps(&MIMIMUM_INTERSECTION_DISTANCE) {
+            Ok (Self {  normal:  Unit::new_normalize(normal), 
+                        point: point, 
+                        ray: *ray,
+                        material_at_intersection: material,
+                        distance_to_intersection: distance_to_intersection,
+                        was_inside: was_inside
+                    })
         } else {
             Err(RayIntersectionError::NoRayTravelDistance)
         }

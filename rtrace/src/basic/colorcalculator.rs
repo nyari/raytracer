@@ -75,12 +75,15 @@ impl SimpleColorCalculator {
                 Ok(mirror_ray) => {
                     let ray_cast_result = ray_caster.cast_ray(&mirror_ray);
 
-                    match ray_cast_result {
-                        Some(color) => {
-                            let fresnel_reflect = material.get_fresnel_data().unwrap();
-                            fresnel_reflect.get_fresnel_reflect(intersection) * color
-                        },
-                        None => Color::zero()
+                    if let Some(color) = ray_cast_result {
+                        let fresnel_reflect = material.get_fresnel_data().unwrap();
+                        if let Some(fresnel_color) = fresnel_reflect.get_fresnel_reflect(intersection) {
+                            fresnel_color * color
+                        } else {
+                            Color::zero()
+                        }
+                    } else {
+                        Color::zero()
                     }
                 },
                 Err(RayError::DepthLimitReached) => Color::zero(),
@@ -100,11 +103,14 @@ impl SimpleColorCalculator {
                 Ok(refract_ray) => {
                     let ray_cast_result = ray_caster.cast_ray(&refract_ray);
 
-                    match ray_cast_result {
-                        Some(color) => {
-                            fresnel_data.get_fresnel_refract(intersection) * color
-                        },
-                        None => Color::zero()
+                    if let Some(color) = ray_cast_result {
+                        if let Some(fresnel_color) = fresnel_data.get_fresnel_refract(intersection) {
+                            fresnel_color * color
+                        } else {
+                            Color::zero()
+                        }
+                    } else {
+                        Color::zero()
                     }
                 },
                 Err(RayError::DepthLimitReached) => Color::zero(),

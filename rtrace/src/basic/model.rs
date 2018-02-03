@@ -29,9 +29,10 @@ impl Model for SolidUnitSphere {
         } else {
             let t1 = (-b + determinant.sqrt()) / (2.0 * a);
             let t2 = (-b - determinant.sqrt()) / (2.0 * a);
-            let result_calc = |t, inside| {
+            let result_calc = |t, inside: bool| {
                 let intersection_point = origin + dir * t;
-                let normal = intersection_point - Point3::origin();
+                let normal = if !inside { intersection_point - Point3::origin() } else { Point3::origin() - intersection_point };
+
                 match RayIntersection::new(normal, intersection_point, ray, self.material, inside) {
                     Ok(intersection) => Some(intersection),
                     Err(RayIntersectionError::NoRayTravelDistance) => None,
@@ -74,10 +75,11 @@ impl Model for SolidXYPlane {
         if !u.near_zero_eps() {
             let s = normal.x * origin.x + normal.y * origin.y + normal.z * origin.z;
             let t = (-s) / u;
-            if t.is_sign_positive() {
-                let is_inside = na::angle(&normal, dir).less_eps(&std::f64::consts::FRAC_PI_2);
+            if t.greater_eq_eps(&0.0) {
+                let is_inside = na::angle(&normal, dir).less_eq_eps(&std::f64::consts::FRAC_PI_2);
                 let point = origin + dir * t;
-                match RayIntersection::new(normal, point, ray, self.material, is_inside) {
+                let actual_normal = if !is_inside { normal } else { -normal };
+                match RayIntersection::new(actual_normal, point, ray, self.material, is_inside) {
                     Ok(intersection) => Some(intersection),
                     Err(RayIntersectionError::NoRayTravelDistance) => None,
                     _ => panic!("Unhandled RayIntersectionError"),

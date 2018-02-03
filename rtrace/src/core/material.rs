@@ -2,6 +2,7 @@ use core::{RayCaster, Color, FresnelIndex, RayIntersection, IlluminationCaster};
 
 use defs::FloatType;
 use ::na;
+use tools::CompareWithTolerance;
 
 pub trait ColorCalculator: Send + Sync {
     fn get_color(&self, itersection: &RayIntersection, ray_caster: &RayCaster, illumination_caster: &IlluminationCaster) -> Option<Color>;
@@ -26,6 +27,7 @@ impl FresnelData {
     fn new(real: FresnelIndex, imaginary: FresnelIndex) -> Self {
         let mut f0 = ((real - FresnelIndex::one()) * (real - FresnelIndex::one())) + imaginary * imaginary;
         f0 *=  (((real + FresnelIndex::one()) * (real + FresnelIndex::one())) + imaginary * imaginary).recip();
+
         let mut f0_inverse = ((imaginary - FresnelIndex::one()) * (imaginary - FresnelIndex::one())) + imaginary * imaginary;
         f0_inverse *=  (((imaginary + FresnelIndex::one()) * (imaginary + FresnelIndex::one())) + imaginary * imaginary).recip(); 
 
@@ -42,13 +44,30 @@ impl FresnelData {
         }
     }
 
-    pub fn get_fresnel_reflect(&self, intersection: &RayIntersection) -> Color {
-        let view_and_normal_angle_cosine = na::angle(&intersection.get_view_direction(), intersection.get_normal_vector()).cos();
-        (Color::one()-self.f0) * Color::one().mul_scalar(&(1.0 - view_and_normal_angle_cosine).powi(5))
+    pub fn get_fresnel_reflect(&self, intersection: &RayIntersection) -> Option<Color> {
+        let view_and_normal_angle_cosine = intersection.get_view_direction().dot(intersection.get_normal_vector());
+
+        if view_and_normal_angle_cosine.greater_eq_eps(&0.0) {
+            let f = if !intersection.was_inside() {
+                self.f0
+            } else {
+                self.f0_inverse
+            };
+
+            let f1 = (Color::one()-f) * Color::one().mul_scalar(&(1.0 - view_and_normal_angle_cosine).powi(5));
+            
+            Some(f + f1)
+        } else {
+            None
+        }
     }
 
-    pub fn get_fresnel_refract(&self, intersection: &RayIntersection) -> Color {
-        Color::one() - self.get_fresnel_reflect(intersection)
+    pub fn get_fresnel_refract(&self, intersection: &RayIntersection) -> Option<Color> {
+        if let Some(color) = self.get_fresnel_reflect(intersection) {
+            Some(Color::one() - color)
+        } else {
+            None
+        }
     }
 }
 
