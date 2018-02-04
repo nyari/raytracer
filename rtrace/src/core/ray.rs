@@ -12,7 +12,7 @@ pub enum RayError {
 
 
 #[derive(Clone, Copy, Debug)]
-pub struct RayState {
+struct RayState {
     distance_to_origin : FloatType,
     inside_counter : i32,
     depth_counter : i32,
@@ -128,6 +128,10 @@ impl Ray {
         }
     }
 
+    fn get_state(&self) -> &RayState {
+        &self.state
+    }
+
     pub fn new_reversed_ray(ray: &Ray) -> Self {
         Self    { direction: (-ray.direction),
                   ..*ray }
@@ -175,10 +179,6 @@ impl Ray {
 
     pub fn leave_object(&mut self) {
         self.state.leave_object()
-    }
-
-    pub fn get_state(&self) -> &RayState {
-        &self.state
     }
 }
 
