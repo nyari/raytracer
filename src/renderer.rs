@@ -1,5 +1,5 @@
 use std::sync::{Arc, mpsc};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver, RecvError, TryRecvError, SendError};
 use std::{thread};
 
 use rtrace::core::{Color, View, PortionableViewIterator, RayCaster, Ray};
@@ -10,7 +10,7 @@ pub trait RendererOutput {
     fn set_output(&mut self, coord: Point2Int, color: Color) -> bool;
 }
 
-
+#[allow(dead_code)]
 pub struct SingleThreadedRenderer<WorldType, OutputType> {
     world: WorldType,
     view: View,
@@ -18,6 +18,7 @@ pub struct SingleThreadedRenderer<WorldType, OutputType> {
 }
 
 
+#[allow(dead_code)]
 impl<WorldType: RayCaster,
      OutputType: RendererOutput> 
     SingleThreadedRenderer<WorldType, OutputType> {
@@ -58,9 +59,10 @@ struct ParallelWorker<WorldType> {
     world: Arc<WorldType>,
     control_tx: Option<Sender<ControlMessage>>,
     worker_rx: Option<Receiver<WorkerMessage>>,
-    join_handle: Option<thread::JoinHandle<()>>,
+    join_handle: Option<thread::JoinHandle<()>>
 }
 
+#[allow(dead_code)]
 impl<WorldType: 'static + RayCaster + Sync + Send> ParallelWorker<WorldType> {
     pub fn new(world: Arc<WorldType>) -> Self {
         Self {  world: world,
@@ -104,31 +106,39 @@ impl<WorldType: 'static + RayCaster + Sync + Send> ParallelWorker<WorldType> {
         }));
     }
 
-    pub fn receive_sync(&self) -> Option<WorkerMessage> {
+    pub fn receive_sync(&self) -> Result<WorkerMessage, RecvError> {
         let receiver = self.worker_rx.as_ref().expect("ParallelWorker not initalized");
-        match receiver.recv() {
-            Ok(message) => Some(message),
-            Err(_) => None,
-        }
+        receiver.recv()
     }
 
-    pub fn receive_async(&self) -> Option<WorkerMessage> {
+    pub fn receive_async(&self) -> Result<Option<WorkerMessage>, ()> {
         let receiver = self.worker_rx.as_ref().expect("ParallelWorker not initalized");
         match receiver.try_recv() {
-            Ok(message) => Some(message),
-            Err(_) => None,
+            Ok(message) => Ok(Some(message)),
+            Err(TryRecvError::Empty) => Ok(None),
+            Err(_) => Err(()),
         }
     }
 
-    pub fn send(&self, message: ControlMessage) {
-        let sender = self.control_tx.as_ref().expect("ParalellWorker not initialized");
-        sender.send(message);
+    pub fn send(&self, message: ControlMessage) -> Result<(), SendError<ControlMessage>> {
+        let sender = self.control_tx.as_ref().expect("ParallelWorker not initialized");
+        sender.send(message)
     }
 
-    pub fn join(&mut self) {
+    pub fn join(&mut self) -> Result<(), ()>{
         let handle = self.join_handle.take().expect("ParallelWorker not initialized");
-        handle.join();
+        match handle.join() {
+            Ok(_) => Ok(()),
+            Err(_) => Err(())
+        }
     }
+}
+
+
+enum ParallelRenderedInternalError {
+    FailedWorker(usize),
+    FailedWorkerWithControlMessage(usize, ControlMessage),
+    EndOfViewIteration
 }
 
 
@@ -151,56 +161,96 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                 output: output}
     }
 
-    pub fn execute(&mut self) {
-        let mut workers: Vec<ParallelWorker<WorldType>> = Vec::new();
-        for _ in 1..(self.thread_count) {
-            workers.push(ParallelWorker::new(self.world.clone()));
-        }
-        for worker in workers.iter_mut() {
-            worker.spawn();
-        }
+    fn process_iteration(workers: &Vec<ParallelWorker<WorldType>>, view_iterator: &mut PortionableViewIterator, output: &mut OutputType) -> Result<(), ParallelRenderedInternalError> {
+        for (worker_index, worker) in workers.iter().enumerate() {
+            let worker_receive_result = worker.receive_async();
+            
+            if let Err(()) = worker_receive_result {
+                return Err(ParallelRenderedInternalError::FailedWorker(worker_index))
+            }
 
-        {
-            let mut view_iterator = PortionableViewIterator::new(&self.view);
-'msgloop:   loop {
-                for worker in workers.iter() {
-                    match worker.receive_async() {
-                        Some(message) => {
-                            match message {
-                                WorkerMessage::Ready => {
-                                    match view_iterator.next() {
-                                        Some((ray, coord)) => {
-                                            worker.send(ControlMessage::CastRay(ray, coord));
-                                        },
-                                        None => {
-                                            break 'msgloop;
-                                        }
-                                    }
+            if let Some(message) = worker_receive_result.unwrap() {
+                match message {
+                    WorkerMessage::Ready => {
+                        match view_iterator.next() {
+                            Some((ray, coord)) => {
+                                if let Err(SendError(message)) = worker.send(ControlMessage::CastRay(ray, coord)) {
+                                    return Err(ParallelRenderedInternalError::FailedWorkerWithControlMessage(worker_index, message))
                                 }
-                                WorkerMessage::Result(color_option, coord) => {
-                                    match color_option {
-                                        Some(color) => { self.output.set_output(coord, color); },
-                                        None => (),
-                                    }
-                                }
+                            },
+                            None => {
+                                return Err(ParallelRenderedInternalError::EndOfViewIteration)
                             }
-                        },
-                        None => (),
+                        }
+                    }
+
+                    WorkerMessage::Result(color_option, coord) => {
+                        match color_option {
+                            Some(color) => { output.set_output(coord, color); },
+                            None => (),
+                        }
                     }
                 }
             }
         }
 
+        Ok(())
+    }
+
+    fn replace_worker(workers: &mut Vec<ParallelWorker<WorldType>>, index: usize, world: &Arc<WorldType>) {
+        workers.swap_remove(index);
+        let mut new_worker = ParallelWorker::new(Arc::clone(world));
+        new_worker.spawn();
+        workers.push(new_worker);
+    }
+
+    pub fn execute(&mut self) {
+        let mut workers: Vec<ParallelWorker<WorldType>> = Vec::new();
+        for _ in 1..(self.thread_count) {
+            let mut new_worker = ParallelWorker::new(Arc::clone(&self.world));
+            new_worker.spawn();
+            workers.push(new_worker);
+        }
+
+        {
+            let mut view_iterator = PortionableViewIterator::new(&self.view);
+            loop {
+                match Self::process_iteration(&workers, &mut view_iterator, &mut self.output) {
+                    Err(ParallelRenderedInternalError::FailedWorker(worker_index)) => {
+                        Self::replace_worker(&mut workers, worker_index, &self.world);
+                    },
+
+                    Err(ParallelRenderedInternalError::FailedWorkerWithControlMessage(worker_index, message)) => {
+                        Self::replace_worker(&mut workers, worker_index, &self.world);
+                        if let ControlMessage::CastRay(ray, coord) = message {
+                            match self.world.cast_ray(&ray) {
+                                Some(color) => {
+                                    self.output.set_output(coord, color);
+                                }
+                                None => (),
+                            }
+                        }
+                    }
+
+                    Err(ParallelRenderedInternalError::EndOfViewIteration) => {
+                        break;
+                    },
+
+                    _ => (),
+                }
+            }
+        }
+
         for worker in workers.iter() {
-            worker.send(ControlMessage::Exit);
+            worker.send(ControlMessage::Exit).is_ok();
         }
         for worker in workers.iter_mut() {
-            worker.join();
+            worker.join().is_ok();
         }
         for worker in workers.iter() {
             let mut done = false;
             while !done {
-                match worker.receive_async() {
+                match worker.receive_async().unwrap(){
                     Some(message) => {
                         match message {
                             WorkerMessage::Result(color_option, coord) => {

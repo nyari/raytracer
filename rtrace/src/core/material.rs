@@ -1,7 +1,6 @@
 use core::{RayCaster, Color, FresnelIndex, RayIntersection, IlluminationCaster};
 
 use defs::FloatType;
-use ::na;
 use tools::CompareWithTolerance;
 
 pub trait ColorCalculator: Send + Sync {

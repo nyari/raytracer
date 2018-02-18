@@ -6,24 +6,6 @@ pub trait Model: Send + Sync {
     fn get_intersection(&self, ray: &Ray) -> Option<RayIntersection>;
 }
 
-
-pub struct SimpleModelWrapper<T: Model> {
-    wrapped_model: T,
-}
-
-impl<T:Model> SimpleModelWrapper<T> {
-    fn new(model: T) -> Self {
-        Self {wrapped_model: model}
-    }
-}
-
-impl<T: Model> Model for SimpleModelWrapper<T> {
-    fn get_intersection(&self, ray: & Ray) -> Option<RayIntersection<>> {
-        self.wrapped_model.get_intersection(ray)
-    }
-}
-
-
 pub struct ModelViewModelWrapper<T: Model> {
     wrapped_model: T,
     tf_matrix: Matrix4,

@@ -6,10 +6,10 @@ mod renderer;
 use rtrace::basic::{SimpleWorld, SimpleIlluminator, SimpleIntersector, SimpleColorCalculator};
 use rtrace::basic::model::{SolidUnitSphere, SolidXYPlane};
 use rtrace::basic::lightsource::{DotLightSource};
-use rtrace::core::{ModelViewModelWrapper, Material, Color, FresnelIndex, View, PortionableViewIterator, RayCaster};
+use rtrace::core::{ModelViewModelWrapper, Material, Color, FresnelIndex, View};
 use rtrace::defs::{Point3, Point2Int, Vector3, FloatType};
 use image::{DynamicImage, Rgba, Pixel, GenericImage, ImageFormat};
-use renderer::{ParalellRenderer, SingleThreadedRenderer, RendererOutput};
+use renderer::{ParalellRenderer, RendererOutput};
 
 use std::f64::consts::{PI};
 
@@ -117,7 +117,9 @@ fn main() {
 
     match std::fs::File::create("output/result.png") {
         Ok(ref mut file) => {
-            renderer.get_renderer_output().get_image().save(file, ImageFormat::PNG);
+            if let Err(err_msg) = renderer.get_renderer_output().get_image().save(file, ImageFormat::PNG) {
+                eprintln!("Couldnt save output file: {:?}", err_msg);
+            }
         },
         Err(_) => ()
     }

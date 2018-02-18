@@ -36,7 +36,6 @@ impl Model for SolidUnitSphere {
                 match RayIntersection::new(normal, intersection_point, ray, self.material, inside) {
                     Ok(intersection) => Some(intersection),
                     Err(RayIntersectionError::NoRayTravelDistance) => None,
-                    _ => panic!("Unhandled RayIntersectionError")
                 }
             };
 
@@ -82,7 +81,6 @@ impl Model for SolidXYPlane {
                 match RayIntersection::new(actual_normal, point, ray, self.material, is_inside) {
                     Ok(intersection) => Some(intersection),
                     Err(RayIntersectionError::NoRayTravelDistance) => None,
-                    _ => panic!("Unhandled RayIntersectionError"),
                 }
             } else {
                 None

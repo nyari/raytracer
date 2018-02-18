@@ -68,7 +68,6 @@ impl RayIntersection {
         let point = Point3::from_homogeneous(transformation_matrix * self.point.to_homogeneous()).expect("Unhomogeneous transformed point");
         let normal = Vector3::from_homogeneous(transformation_matrix * self.normal.to_homogeneous()).expect("Unhomogeneous transformed vector");
         let ray = self.ray.get_transformed(transformation_matrix);
-        let distance_to_intersection = na::distance(ray.get_origin(), &point);
 
         Self::new(normal, point, &ray, self.material_at_intersection, self.was_inside)
     }
