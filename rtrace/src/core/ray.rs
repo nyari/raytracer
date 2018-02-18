@@ -137,14 +137,12 @@ impl Ray {
                   ..*ray }
     }
 
-    pub fn get_transformed(&self, point_and_dir_mx: (&Matrix4, &Matrix4)) -> Self {
-        let (point_tf_mx, vector_tf_mx) = point_and_dir_mx;
-
+    pub fn get_transformed(&self, transformation_matrix: &Matrix4) -> Self {
         let origin = self.origin.to_homogeneous();
         let direction = self.direction.to_homogeneous();
 
-        Self    { origin: Point3::from_homogeneous(point_tf_mx * origin).expect("Unhomogeneous transformed point"),
-                  direction: Unit::new_normalize(Vector3::from_homogeneous(vector_tf_mx * direction).expect("Unhomogeneous transformed vector")),
+        Self    { origin: Point3::from_homogeneous(transformation_matrix * origin).expect("Unhomogeneous transformed point"),
+                  direction: Unit::new_normalize(Vector3::from_homogeneous(transformation_matrix * direction).expect("Unhomogeneous transformed vector")),
                   ..*self
         }
     }

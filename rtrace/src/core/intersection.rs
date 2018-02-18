@@ -64,12 +64,10 @@ impl RayIntersection {
         self.was_inside
     }
 
-    pub fn get_transformed(self, point_and_dir_mx: (&Matrix4, &Matrix4)) -> Result<Self, RayIntersectionError> {
-        let (point_tf_mx, vector_tf_mx) = point_and_dir_mx;
-
-        let point = Point3::from_homogeneous(point_tf_mx * self.point.to_homogeneous()).expect("Unhomogeneous transformed point");
-        let normal = Vector3::from_homogeneous(vector_tf_mx * self.normal.to_homogeneous()).expect("Unhomogeneous transformed vector");
-        let ray = self.ray.get_transformed(point_and_dir_mx);
+    pub fn get_transformed(self, transformation_matrix: &Matrix4) -> Result<Self, RayIntersectionError> {
+        let point = Point3::from_homogeneous(transformation_matrix * self.point.to_homogeneous()).expect("Unhomogeneous transformed point");
+        let normal = Vector3::from_homogeneous(transformation_matrix * self.normal.to_homogeneous()).expect("Unhomogeneous transformed vector");
+        let ray = self.ray.get_transformed(transformation_matrix);
         let distance_to_intersection = na::distance(ray.get_origin(), &point);
 
         Self::new(normal, point, &ray, self.material_at_intersection, self.was_inside)

@@ -27,15 +27,13 @@ impl<T: Model> Model for SimpleModelWrapper<T> {
 pub struct ModelViewModelWrapper<T: Model> {
     wrapped_model: T,
     tf_matrix: Matrix4,
-    inverse_tf_matrix: Matrix4,
-    inverse_transposed_tf_matrix: Matrix4
+    inverse_tf_matrix: Matrix4
 }
 
 impl<T: Model> ModelViewModelWrapper<T> {
     pub fn new(model: T, model_view_matrix: Matrix4) -> Self {
         Self {  wrapped_model: model,
                 inverse_tf_matrix: model_view_matrix.try_inverse().expect("Uninvertable Model View Matrix"),
-                inverse_transposed_tf_matrix: model_view_matrix.try_inverse().expect("Uninvertable Model View Matrix").transpose(),
                 tf_matrix: model_view_matrix
         }
     }
@@ -43,20 +41,17 @@ impl<T: Model> ModelViewModelWrapper<T> {
     pub fn new_identity(model: T) -> Self {
         Self {  wrapped_model: model,
                 inverse_tf_matrix: Matrix4::identity(),
-                inverse_transposed_tf_matrix: Matrix4::identity(),
                 tf_matrix: Matrix4::identity()
         }
     }
 
     fn recalculate_cached_matrices(&mut self) {
         self.inverse_tf_matrix = self.tf_matrix.try_inverse().expect("Uninvertable Model View Matrix");
-        self.inverse_transposed_tf_matrix = self.inverse_tf_matrix.transpose();
     }
 
     pub fn load_identity(&mut self) {
         self.tf_matrix = Matrix4::identity();
         self.inverse_tf_matrix = Matrix4::identity();
-        self.inverse_transposed_tf_matrix = Matrix4::identity();
     }
 
     pub fn scale_uniform(&mut self, scaling: FloatType) {
@@ -105,11 +100,11 @@ impl<T: Model> ModelViewModelWrapper<T> {
 
 impl<T: Model> Model for ModelViewModelWrapper<T> {
     fn get_intersection(&self, ray: & Ray) -> Option<RayIntersection<>> {
-        let transformed_ray = ray.get_transformed((&self.inverse_tf_matrix, &self.inverse_tf_matrix));
+        let transformed_ray = ray.get_transformed(&self.inverse_tf_matrix);
 
         match self.wrapped_model.get_intersection(&transformed_ray) {
             None => None,
-            Some(transformed_intersection) => transformed_intersection.get_transformed((&self.tf_matrix, &self.tf_matrix)).ok()
+            Some(transformed_intersection) => transformed_intersection.get_transformed(&self.tf_matrix).ok()
         }
     }
 }
