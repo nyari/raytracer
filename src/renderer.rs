@@ -250,8 +250,8 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
         for worker in workers.iter() {
             let mut done = false;
             while !done {
-                match worker.receive_async().unwrap(){
-                    Some(message) => {
+                match worker.receive_sync() {
+                    Ok(message) => {
                         match message {
                             WorkerMessage::Result(color_option, coord) => {
                                 match color_option {
@@ -262,7 +262,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                             _ => (),
                         }
                     }
-                    None => {
+                    Err(_) => {
                         done = true;
                     }
                 }
