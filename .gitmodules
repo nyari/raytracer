@@ -1,0 +1,3 @@
+[submodule "rtrace"]
+	path = rtrace
+	url = git@github.com:nyari/rtrace.git
