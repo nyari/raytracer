@@ -3,9 +3,12 @@ target
 # Cargo ingnored files
 Cargo.lock
 
-
 # Visual Studio Code files
 .vscode
 
-# Output folder
+# Rust toolchain
+*.fmt
+
+# Cargo
 /output/*
+
