@@ -2,7 +2,7 @@ use std::sync::{Arc, mpsc};
 use std::sync::mpsc::{Sender, Receiver, RecvError, TryRecvError, SendError};
 use std::{thread};
 
-use rtrace::core::{Color, View, PortionableViewIterator, RayCaster, Ray};
+use rtrace::core::{Color, View, ViewIterator, RayCaster, Ray};
 use rtrace::defs::{Point2Int};
 
 
@@ -30,7 +30,7 @@ impl<WorldType: RayCaster,
     }
 
     pub fn execute(&mut self) {
-        for (ray, coord) in PortionableViewIterator::new(&self.view) {
+        for (ray, coord) in ViewIterator::new(&self.view) {
             match self.world.cast_ray(&ray) {
                 Some(color) => {
                     self.output.set_output(coord, color);
@@ -161,7 +161,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                 output: output}
     }
 
-    fn process_iteration(workers: &Vec<ParallelWorker<WorldType>>, view_iterator: &mut PortionableViewIterator, output: &mut OutputType) -> Result<(), ParallelRenderedInternalError> {
+    fn process_iteration(workers: &Vec<ParallelWorker<WorldType>>, view_iterator: &mut ViewIterator, output: &mut OutputType) -> Result<(), ParallelRenderedInternalError> {
         for (worker_index, worker) in workers.iter().enumerate() {
             let worker_receive_result = worker.receive_async();
             
@@ -174,6 +174,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
                     WorkerMessage::Ready => {
                         match view_iterator.next() {
                             Some((ray, coord)) => {
+                                println!("Sent ray to: {}, {}", coord.x, coord.y);
                                 if let Err(SendError(message)) = worker.send(ControlMessage::CastRay(ray, coord)) {
                                     return Err(ParallelRenderedInternalError::FailedWorkerWithControlMessage(worker_index, message))
                                 }
@@ -186,7 +187,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
 
                     WorkerMessage::Result(color_option, coord) => {
                         match color_option {
-                            Some(color) => { output.set_output(coord, color); },
+                            Some(color) => { println!("Recevied result for: {}, {}", coord.x, coord.y); output.set_output(coord, color); },
                             None => (),
                         }
                     }
@@ -213,7 +214,7 @@ impl<WorldType: 'static + RayCaster + Sync + Send,
         }
 
         {
-            let mut view_iterator = PortionableViewIterator::new(&self.view);
+            let mut view_iterator = ViewIterator::new(&self.view);
             loop {
                 match Self::process_iteration(&workers, &mut view_iterator, &mut self.output) {
                     Err(ParallelRenderedInternalError::FailedWorker(worker_index)) => {

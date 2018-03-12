@@ -1,15 +1,21 @@
 extern crate rtrace;
 extern crate image;
 
+#[macro_use]
+extern crate approx; // For the macro relative_eq!
+extern crate nalgebra as na;
+
 mod renderer;
 
-use rtrace::basic::{SimpleWorld, SimpleIlluminator, SimpleIntersector, SimpleColorCalculator};
-use rtrace::basic::model::{SolidUnitSphere, SolidXYPlane};
+use rtrace::basic::{SimpleIlluminator, SimpleIntersector, SimpleColorCalculator, GlobalIlluminationColorCalculator};
+use rtrace::basic::model::{SolidSphere, SolidPlane};
 use rtrace::basic::lightsource::{DotLightSource};
-use rtrace::core::{ModelViewModelWrapper, Material, Color, FresnelIndex, View};
+use rtrace::core::{ModelViewModelWrapper, Material, Color, FresnelIndex, View, World};
 use rtrace::defs::{Point3, Point2Int, Vector3, FloatType};
 use image::{DynamicImage, Rgba, Pixel, GenericImage, ImageFormat};
-use renderer::{ParalellRenderer, RendererOutput};
+use renderer::{SingleThreadedRenderer, ParalellRenderer, RendererOutput};
+
+use na::{Unit};
 
 use std::f64::consts::{PI};
 
@@ -38,6 +44,10 @@ impl RendererOutput for ImageRendererOutput {
 
 
 fn main() {
+    let solid_diffuse_red = Material::new_diffuse(Color::new(1.0, 0.0, 0.0), None);
+    let solid_diffuse_green = Material::new_diffuse(Color::new(0.0, 1.0, 0.0), None);
+    let solid_diffuse_blue = Material::new_diffuse(Color::new(0.0, 0.0, 1.0), None);
+    let solid_diffuse_white = Material::new_diffuse(Color::new(1.0, 1.0, 1.0), None);
     let solid_shiny_red = Material::new_shiny(Color::new(0.87, 0.17, 0.08), (Color::new(1.0, 1.0, 1.0), 7.0), None);
     let solid_shiny_green = Material::new_shiny(Color::new(0.07, 0.90, 0.11), (Color::new(1.0, 1.0, 1.0), 7.0), None);
     let solid_shiny_blue = Material::new_shiny(Color::new(0.03, 0.07, 0.93), (Color::new(1.0, 1.0, 1.0), 7.0), None);
@@ -48,65 +58,53 @@ fn main() {
     let tan_60 = (PI/3.0).tan();
     
 
-    let sphere_1 = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidUnitSphere::new(solid_shiny_red));
-        result.translate(Vector3::new(-1.0, -tan_60 * 0.5, 0.0));
-        result
-    };
-    let sphere_2 = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidUnitSphere::new(solid_shiny_green));
-        result.translate(Vector3::new(1.0, -tan_60 * 0.5, 0.0));
-        result
-    };
-    let sphere_3 = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidUnitSphere::new(solid_shiny_blue));
-        result.translate(Vector3::new(0.0, 0.5*tan_60, 0.0));
-        result
-    };
-    let plane = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidXYPlane::new(solid_shiny_white));
-        result.translate(Vector3::new(0.0, 0.0, -2.0));
-        result
-    };
-    let mirror = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidXYPlane::new(silver));
-        result.rotate(Vector3::new(1.0, 0.0, 0.0), PI/2.0);
-        result.translate(Vector3::new(0.0, 7.0, 0.0));
-        result
-    };
-    let mirror_2 = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidXYPlane::new(silver));
-        result.rotate(Vector3::new(0.0, 1.0, 0.0), PI/2.0);
-        result.translate(Vector3::new(-7.0, 0.0, 0.0));
-        result
-    };
-    let lens = {
-        let mut result = ModelViewModelWrapper::new_identity(SolidUnitSphere::new(glass));
-        result.scale_non_uniform(Vector3::new(1.0, 0.4, 1.0));
-        result.rotate(Vector3::new(0.0, 0.0, 1.0), PI/5.0);
-        result.translate(Vector3::new(6.5, -3.5, 3.0));
-        result
-    };
+    // let sphere_1 = {
+    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(silver));
+    //     result.translate(Vector3::new(-1.0, -tan_60 * 0.5, 0.0));
+    //     result
+    // };
+    // let sphere_2 = {
+    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(solid_shiny_green));
+    //     result.translate(Vector3::new(1.0, -tan_60 * 0.5, 0.0));
+    //     result
+    // };
+    // let sphere_3 = {
+    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(solid_shiny_blue));
+    //     result.translate(Vector3::new(0.0, 0.5*tan_60, 0.0));
+    //     result
+    // };
+    let plane = SolidPlane::new_positioned(solid_diffuse_green, Point3::new(0.0, 0.0, -2.0), Unit::new_unchecked(Vector3::new(0.0, 0.0, 1.0)));
+    let mirror = SolidPlane::new_positioned(solid_diffuse_red, Point3::new(0.0, 7.0, 0.0), Unit::new_unchecked(Vector3::new(0.0, 1.0, 0.0)));
+    let mirror_2 = SolidPlane::new_positioned(solid_diffuse_blue, Point3::new(-7.0, 0.0, 0.0), Unit::new_unchecked(Vector3::new(-1.0, 0.0, 0.0)));
+
+    // let lens = {
+    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(glass));
+    //     result.scale_non_uniform(Vector3::new(1.0, 0.4, 1.0));
+    //     result.rotate(Vector3::new(0.0, 0.0, 1.0), PI/5.0);
+    //     result.translate(Vector3::new(6.5, -3.5, 3.0));
+    //     result
+    // };
 
     let light = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 60.0, Point3::new(7.0, -7.0, 8.0));
     let light_2 = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 40.0, Point3::new(0.0, 0.0, 8.0));
 
-    let intersector = SimpleIntersector::new(vec![Box::new(sphere_1),
-                                                  Box::new(sphere_2),
-                                                  Box::new(sphere_3),
+    let intersector = SimpleIntersector::new(vec![//Box::new(sphere_1),
+//                                                Box::new(sphere_2),
+//                                                Box::new(sphere_3),
                                                   Box::new(plane),
                                                   Box::new(mirror),
                                                   Box::new(mirror_2),
-                                                  Box::new(lens)]);
+//                                                Box::new(lens)
+                                                  ]);
     let illuminator = SimpleIlluminator::new(vec![Box::new(light),
                                                   Box::new(light_2)]);
     let color_calculator = SimpleColorCalculator::new();
 
-    let world = SimpleWorld::new(intersector, color_calculator, illuminator, 8);
+    let world = World::new(intersector, color_calculator, illuminator, 8);
     let view = View::new_unit(Point3::new(7.0, -7.0, 4.0),
                               Vector3::new(-7.0, 7.0, -1.0), 
                               Vector3::new(0.0, 0.0, 1.0),
-                              1.77777777, 0.8, 4320);
+                              1.77777777, 0.8, 480);
 
 
     let (screen_hor_res, screen_ver_res) = view.get_screen().get_resolutoion();

@@ -6,3 +6,9 @@ authors = ["Nyári Dávid Tamás <nyaridavid@gmail.com>"]
 [dependencies]
 rtrace = { path = "./rtrace", version = "0.0.1"}
 image = "*"
+approx = "~0"
+nalgebra = "~0"
+
+[profile.release]
+debug = true
+opt-level = 3
