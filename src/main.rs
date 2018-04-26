@@ -7,17 +7,24 @@ extern crate nalgebra as na;
 
 mod renderer;
 
-use rtrace::basic::{SimpleIlluminator, SimpleIntersector, SimpleColorCalculator, GlobalIlluminationColorCalculator};
+use rtrace::basic::{SimpleIlluminator, SimpleIntersector, SimpleColorCalculator, WorldViewTaskProducer, 
+                    GlobalIlluminationShaderTaskProducer, GlobalIlluminationShader, MedianFilter};
 use rtrace::basic::model::{SolidSphere, SolidPlane};
 use rtrace::basic::lightsource::{DotLightSource};
-use rtrace::core::{ModelViewModelWrapper, Material, Color, FresnelIndex, View, World};
+use rtrace::core::{ModelViewModelWrapper, Material, Color, ThreadSafeIterator,
+                   FresnelIndex, View, World, WorldView, WorldViewTrait, RenderingTaskProducer, ScreenIterator,
+                   OrderedTaskProducers, SceneBufferLayering, ImmutableSceneBuffer, MutableSceneBuffer ,ImmutableSceneBufferWrapper,
+                   BasicSceneBuffer};
 use rtrace::defs::{Point3, Point2Int, Vector3, FloatType};
 use image::{DynamicImage, Rgba, Pixel, GenericImage, ImageFormat};
 use renderer::{SingleThreadedRenderer, ParalellRenderer, RendererOutput};
 
 use na::{Unit};
+use std::sync::{Arc};
+use std::borrow::{Borrow};
 
-use std::f64::consts::{PI};
+use std::thread;
+use std::f64::consts::{PI, FRAC_PI_2};
 
 struct ImageRendererOutput {
     image: DynamicImage,
@@ -44,9 +51,9 @@ impl RendererOutput for ImageRendererOutput {
 
 
 fn main() {
-    let solid_diffuse_red = Material::new_diffuse(Color::new(1.0, 0.0, 0.0), None);
-    let solid_diffuse_green = Material::new_diffuse(Color::new(0.0, 1.0, 0.0), None);
-    let solid_diffuse_blue = Material::new_diffuse(Color::new(0.0, 0.0, 1.0), None);
+    let solid_diffuse_red = Material::new_diffuse(Color::new(1.0, 0.2, 0.2), None);
+    let solid_diffuse_green = Material::new_diffuse(Color::new(0.2, 1.0, 0.2), None);
+    let solid_diffuse_blue = Material::new_diffuse(Color::new(0.2, 0.2, 1.0), None);
     let solid_diffuse_white = Material::new_diffuse(Color::new(1.0, 1.0, 1.0), None);
     let solid_shiny_red = Material::new_shiny(Color::new(0.87, 0.17, 0.08), (Color::new(1.0, 1.0, 1.0), 7.0), None);
     let solid_shiny_green = Material::new_shiny(Color::new(0.07, 0.90, 0.11), (Color::new(1.0, 1.0, 1.0), 7.0), None);
@@ -104,18 +111,71 @@ fn main() {
     let view = View::new_unit(Point3::new(7.0, -7.0, 4.0),
                               Vector3::new(-7.0, 7.0, -1.0), 
                               Vector3::new(0.0, 0.0, 1.0),
-                              1.77777777, 0.8, 480);
+                              1.77777777, 1.6, 480);
 
+    let worldview:Arc<WorldViewTrait> = Arc::new(WorldView::new(world, view));
+    let shader_global_illumination = Arc::new(GlobalIlluminationShader::new(Arc::clone(&worldview), 50, FRAC_PI_2 * (4.0/5.0)));
 
-    let (screen_hor_res, screen_ver_res) = view.get_screen().get_resolutoion();
+    let task_producer_list = vec![WorldViewTaskProducer::new(Arc::clone(&worldview)),
+                                  GlobalIlluminationShaderTaskProducer::new(Arc::clone(&shader_global_illumination))];
+    
+    let task_producer = OrderedTaskProducers::new(task_producer_list);
+    let task_iterator = Arc::new(task_producer.create_task_iterator());
 
-    let renderer_output = ImageRendererOutput::new(screen_hor_res as u32, screen_ver_res as u32);
-    let mut renderer = ParalellRenderer::new(8, world, view, renderer_output);
-    renderer.execute();
+    let mut thread_container: Vec<std::thread::JoinHandle<()>> = Vec::new();
+    for _counter in 0..8 {
+        let intermediate_task_iterator = Arc::clone(&task_iterator);
+        thread_container.push(thread::spawn(move || {
+            while let Some(executable_task) = intermediate_task_iterator.next() {
+                executable_task.execute();
+            }
+        }));
+    }
+
+    for thread_joiner in thread_container {
+        thread_joiner.join().unwrap();
+    }
+
+    let gi_overlay = Arc::new(BasicSceneBuffer::new(*worldview.get_screen()));
+    let mut thread_container: Vec<std::thread::JoinHandle<()>> = Vec::new();
+    let model_ids = shader_global_illumination.get_all_model_ids_on_buffer().unwrap();
+    for model_id in model_ids {
+        let worldview_clone = Arc::clone(&worldview);
+        let shader = Arc::clone(&shader_global_illumination);
+        let overlay = Arc::clone(&gi_overlay);
+        thread_container.push(thread::spawn(move || {
+            let model_buffer = shader.get_model_buffer(model_id).unwrap();
+            let immutable_model_buffer = ImmutableSceneBufferWrapper::new(model_buffer.as_ref());
+            let median_filter = MedianFilter::new(&immutable_model_buffer, 5);
+            worldview_clone.combine_buffer(&median_filter);
+        }));
+    }
+
+    for thread_joiner in thread_container {
+        thread_joiner.join().unwrap();
+    }
+
+    // worldview.layer_buffer(SceneBufferLayering::Over, 
+    //                        &ImmutableSceneBufferWrapper::new(gi_overlay.as_ref()));
+
+    let screen = worldview.get_view().get_screen();
+    let (width, height) = screen.get_resolution();
+    let mut result_image = DynamicImage::new_rgb8(width as u32, height as u32);
+    for coord in ScreenIterator::new(worldview.get_view().get_screen()) {
+        if let Ok(Some(color)) = worldview.get_pixel_value(coord) {
+            let (r, g, b) = color.normalized().mul_scalar(&(u8::max_value() as FloatType)).get();
+            let pixel_color = Rgba::from_channels(r as u8, g as u8, b as u8, u8::max_value());
+            result_image.put_pixel(coord.x as u32, coord.y as u32, pixel_color);
+        }
+    }
+
+    // let renderer_output = ImageRendererOutput::new(screen_hor_res as u32, screen_ver_res as u32);
+    // let mut renderer = ParalellRenderer::new(8, world, view, renderer_output);
+    // renderer.execute();
 
     match std::fs::File::create("output/result.png") {
         Ok(ref mut file) => {
-            if let Err(err_msg) = renderer.get_renderer_output().get_image().save(file, ImageFormat::PNG) {
+            if let Err(err_msg) = result_image.save(file, ImageFormat::PNG) {
                 eprintln!("Couldnt save output file: {:?}", err_msg);
             }
         },
