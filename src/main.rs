@@ -61,63 +61,55 @@ fn main() {
     let solid_shiny_white = Material::new_shiny(Color::new(1.0, 1.0, 1.0), (Color::new(1.0, 1.0, 1.0), 4.0), None);
     let silver = Material::new_reflective(FresnelIndex::new(0.17, 0.17, 0.17), FresnelIndex::new(2.0, 2.0, 2.0), None, Some((Color::one(), 100.0)), None);
     let glass = Material::new_reflective_and_refractive(FresnelIndex::new(1.55, 1.5, 1.45), FresnelIndex::one(), None, None, None);
+    let light_bulb_mat = Material::new_light_source(Color::one(), None);
 
     let tan_60 = (PI/3.0).tan();
     
+    let sphere_1 = SolidSphere::new_positioned(solid_shiny_red, Point3::new(-1.0, -tan_60 * 0.5, 1.5), 1.0);
+    let sphere_2 = SolidSphere::new_positioned(solid_shiny_green, Point3::new(1.0, -tan_60 * 0.5, 0.0), 1.0);
+    let sphere_3 = SolidSphere::new_positioned(solid_shiny_blue, Point3::new(0.0, 0.5*tan_60, 3.0), 1.0);
+    let light_bulb = SolidSphere::new_positioned(light_bulb_mat, Point3::new(7.0, -7.0, 8.0), 1.0);
 
-    // let sphere_1 = {
-    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(silver));
-    //     result.translate(Vector3::new(-1.0, -tan_60 * 0.5, 0.0));
-    //     result
-    // };
-    // let sphere_2 = {
-    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(solid_shiny_green));
-    //     result.translate(Vector3::new(1.0, -tan_60 * 0.5, 0.0));
-    //     result
-    // };
-    // let sphere_3 = {
-    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(solid_shiny_blue));
-    //     result.translate(Vector3::new(0.0, 0.5*tan_60, 0.0));
-    //     result
-    // };
-    let plane = SolidPlane::new_positioned(solid_diffuse_green, Point3::new(0.0, 0.0, -2.0), Unit::new_unchecked(Vector3::new(0.0, 0.0, 1.0)));
-    let mirror = SolidPlane::new_positioned(solid_diffuse_red, Point3::new(0.0, 7.0, 0.0), Unit::new_unchecked(Vector3::new(0.0, 1.0, 0.0)));
-    let mirror_2 = SolidPlane::new_positioned(solid_diffuse_blue, Point3::new(-7.0, 0.0, 0.0), Unit::new_unchecked(Vector3::new(-1.0, 0.0, 0.0)));
+    let plane = SolidPlane::new_positioned(solid_diffuse_white, Point3::new(0.0, 0.0, -2.0), Unit::new_unchecked(Vector3::new(0.0, 0.0, 1.0)));
+    let mirror = SolidPlane::new_positioned(silver, Point3::new(0.0, 7.0, 0.0), Unit::new_unchecked(Vector3::new(0.0, 1.0, 0.0)));
+    let mirror_2 = SolidPlane::new_positioned(solid_diffuse_red, Point3::new(-7.0, 0.0, 0.0), Unit::new_unchecked(Vector3::new(-1.0, 0.0, 0.0)));
 
-    // let lens = {
-    //     let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(glass));
-    //     result.scale_non_uniform(Vector3::new(1.0, 0.4, 1.0));
-    //     result.rotate(Vector3::new(0.0, 0.0, 1.0), PI/5.0);
-    //     result.translate(Vector3::new(6.5, -3.5, 3.0));
-    //     result
-    // };
+    let lens = {
+        let mut result = ModelViewModelWrapper::new_identity(SolidSphere::new(glass));
+        result.scale_non_uniform(Vector3::new(1.0, 0.4, 1.0));
+        result.rotate(Vector3::new(0.0, 0.0, 1.0), PI/5.0);
+        result.translate(Vector3::new(6.5, -3.5, 3.0));
+        result
+    };
 
     let light = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 60.0, Point3::new(7.0, -7.0, 8.0));
-    let light_2 = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 40.0, Point3::new(0.0, 0.0, 8.0));
+//  let light_2 = DotLightSource::new_natural(Color::new(1.0, 1.0, 1.0), 40.0, Point3::new(0.0, 0.0, 8.0));
 
-    let intersector = SimpleIntersector::new(vec![//Box::new(sphere_1),
-//                                                Box::new(sphere_2),
-//                                                Box::new(sphere_3),
+    let intersector = SimpleIntersector::new(vec![Box::new(sphere_1),
+                                                  Box::new(sphere_2),
+                                                  Box::new(sphere_3),
+                                                  Box::new(light_bulb),
                                                   Box::new(plane),
                                                   Box::new(mirror),
                                                   Box::new(mirror_2),
-//                                                Box::new(lens)
+                                                  Box::new(lens)
                                                   ]);
-    let illuminator = SimpleIlluminator::new(vec![Box::new(light),
-                                                  Box::new(light_2)]);
+    let illuminator = SimpleIlluminator::new(vec![Box::new(light)]);
+
     let color_calculator = SimpleColorCalculator::new();
 
     let world = World::new(intersector, color_calculator, illuminator, 8);
     let view = View::new_unit(Point3::new(7.0, -7.0, 4.0),
                               Vector3::new(-7.0, 7.0, -1.0), 
                               Vector3::new(0.0, 0.0, 1.0),
-                              1.77777777, 1.6, 480);
+                              1.77777777, 1.6, 1080);
 
     let worldview:Arc<WorldViewTrait> = Arc::new(WorldView::new(world, view));
-    let shader_global_illumination = Arc::new(GlobalIlluminationShader::new(Arc::clone(&worldview), 50, FRAC_PI_2 * (4.0/5.0)));
+    let shader_global_illumination = Arc::new(GlobalIlluminationShader::new(Arc::clone(&worldview), 5000, FRAC_PI_2 * (4.0/5.0)));
 
     let task_producer_list = vec![WorldViewTaskProducer::new(Arc::clone(&worldview)),
-                                  GlobalIlluminationShaderTaskProducer::new(Arc::clone(&shader_global_illumination))];
+                                  GlobalIlluminationShaderTaskProducer::new(Arc::clone(&shader_global_illumination))
+                                  ];
     
     let task_producer = OrderedTaskProducers::new(task_producer_list);
     let task_iterator = Arc::new(task_producer.create_task_iterator());
@@ -146,7 +138,7 @@ fn main() {
         thread_container.push(thread::spawn(move || {
             let model_buffer = shader.get_model_buffer(model_id).unwrap();
             let immutable_model_buffer = ImmutableSceneBufferWrapper::new(model_buffer.as_ref());
-            let median_filter = MedianFilter::new(&immutable_model_buffer, 5);
+            let median_filter = MedianFilter::new(&immutable_model_buffer, 3);
             worldview_clone.combine_buffer(&median_filter);
         }));
     }
@@ -155,6 +147,8 @@ fn main() {
         thread_joiner.join().unwrap();
     }
 
+    // worldview.layer_buffer(SceneBufferLayering::Over, 
+    //                        &ImmutableSceneBufferWrapper::new(shader_global_illumination.get_entire_buffer().unwrap().as_ref()));
     // worldview.layer_buffer(SceneBufferLayering::Over, 
     //                        &ImmutableSceneBufferWrapper::new(gi_overlay.as_ref()));
 
