@@ -169,7 +169,7 @@ fn main() {
 
     match std::fs::File::create("output/result.png") {
         Ok(ref mut file) => {
-            if let Err(err_msg) = result_image.save(file, ImageFormat::PNG) {
+            if let Err(err_msg) = result_image.write_to(file, ImageFormat::PNG) {
                 eprintln!("Couldnt save output file: {:?}", err_msg);
             }
         },
