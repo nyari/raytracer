@@ -102,10 +102,10 @@ fn main() {
     let view = View::new_unit(Point3::new(7.0, -7.0, 4.0),
                               Vector3::new(-7.0, 7.0, -1.0), 
                               Vector3::new(0.0, 0.0, 1.0),
-                              1.77777777, 1.6, 1080);
+                              1.77777777, 1.6, 720);
 
     let worldview:Arc<WorldViewTrait> = Arc::new(WorldView::new(world, view));
-    let shader_global_illumination = Arc::new(GlobalIlluminationShader::new(Arc::clone(&worldview), 5000, FRAC_PI_2 * (4.0/5.0)));
+    let shader_global_illumination = Arc::new(GlobalIlluminationShader::new(Arc::clone(&worldview), 1000, FRAC_PI_2 * (4.0/5.0)));
 
     let task_producer_list = vec![WorldViewTaskProducer::new(Arc::clone(&worldview)),
                                   GlobalIlluminationShaderTaskProducer::new(Arc::clone(&shader_global_illumination))
