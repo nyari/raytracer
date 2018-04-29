@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Nyári Dávid Tamás <nyaridavid@gmail.com>"]
 
 [dependencies]
-rtrace = { path = "./rtrace", version = "0.0.1"}
+rtrace = { path = "./rtrace", version = "0.1.0"}
 image = "*"
 approx = "~0"
 nalgebra = "~0"
